@@ -1,5 +1,7 @@
 """Demo: minimize curve length subject to a fixed-length integral constraint."""
 
+import math
+
 import sympy as sp
 
 from bspline_solver import EnergyMinimizer2D, SplinePath, plot_spline_path
@@ -12,10 +14,11 @@ def main() -> None:
     vt = sp.Symbol("vt")
     v = sp.Symbol("v")
 
-    # Waypoints with tangent angles (None = no tangent constraint).
+    # Waypoints: initial tangent angles are required for initialization;
+    # fix_angle=False lets them optimize freely.
     vertices = [[0, 0], [1, 1], [2, 2]]
-    thetas = [None, None, None]
-    path = SplinePath(vertices, thetas)
+    thetas = [math.pi/4, 0, math.pi/4]
+    path = SplinePath(vertices, thetas, fix_angle=[False, False, False], fix_location=[True, False, True])
     control, knot = path.initial_controls()
 
     # Lagrangian: integrand v * sqrt(ut^2 + vt^2). Constraint: arc length = 2.

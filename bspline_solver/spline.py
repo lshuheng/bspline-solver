@@ -104,24 +104,34 @@ class SplinePath:
     """A sequence of B-spline segments joined at waypoints.
 
     A path is defined by an ordered list of waypoints (vertices). Between
-    consecutive waypoints there is a B-spline segment; each waypoint
-    optionally carries a tangent angle that constrains the curve's slope
-    at that point.
+    consecutive waypoints there is a B-spline segment; each waypoint carries
+    a tangent angle used to initialize control-point positions, and independent
+    flags controlling whether its location and angle are held fixed during
+    optimization.
 
     Attributes:
         vertex: List of waypoint coordinates as tuples.
-        theta: Dict mapping each vertex to its tangent angle (or None).
+        theta: Dict mapping each vertex to its tangent angle.
+        fix_location: Dict mapping each vertex to whether its location is fixed.
+        fix_angle: Dict mapping each vertex to whether its tangent angle is fixed.
         edges: List of (start_vertex, end_vertex) tuples.
     """
 
     def __init__(
         self,
         vertex: list,
-        theta: list[Optional[float]],
+        theta: list[float],
         n_bisections: int = 2,
+        fix_location: list[bool] | None = None,
+        fix_angle: list[bool] | None = None,
     ) -> None:
+        if any(t is None for t in theta):
+            raise ValueError("theta must be provided for every vertex")
         self.vertex = [tuple(v) for v in vertex]
+        n = len(self.vertex)
         self.theta = dict(zip(self.vertex, theta))
+        self.fix_location = dict(zip(self.vertex, fix_location if fix_location is not None else [True] * n))
+        self.fix_angle = dict(zip(self.vertex, fix_angle if fix_angle is not None else [True] * n))
         self.edges = [
             (self.vertex[i], self.vertex[i + 1]) for i in range(len(self.vertex) - 1)
         ]
@@ -145,39 +155,58 @@ class SplinePath:
         return control_dict, knot
 
     def grad_mask(self, grad: dict) -> None:
-        """Zero/project gradients at clamped endpoints and tangent-constrained waypoints.
+        """Zero/project gradients according to per-waypoint fix_location and fix_angle flags.
 
-        Endpoints are pinned (gradient set to zero), tangent-constrained points
-        only allow movement along their tangent direction (normal component
-        projected out), and at internal waypoints the gradients on adjacent
-        edges are coupled to enforce C^1 continuity.
+        Fixed-location waypoints have their endpoint gradient zeroed. Fixed-angle
+        waypoints have the normal component of their adjacent interior control-point
+        gradient projected out. At internal waypoints, free-location endpoints are
+        coupled so both adjacent edges move together, and C^1 continuity is always
+        enforced by coupling the second/second-to-last control-point gradients.
         """
         for v in self.vertex:
             e_head = self.vertex_to_edge_head[v]
             e_tail = self.vertex_to_edge_tail[v]
             theta = self.theta[v]
+            fix_loc = self.fix_location[v]
+            fix_ang = self.fix_angle[v]
 
             if e_head:
                 e = e_head[0]
                 grad_array = grad[e]
-                grad_array[:, 0] = 0
-                if theta is not None:
+                if fix_loc:
+                    grad_array[:, 0] = 0
+                if fix_ang:
                     d = grad_array[:, 1].copy()
                     grad_array[:, 1] = d - normal_projection(theta, *d)
 
             if e_tail:
                 e = e_tail[0]
                 grad_array = grad[e]
-                grad_array[:, -1] = 0
-                if theta is not None:
+                if fix_loc:
+                    grad_array[:, -1] = 0
+                if fix_ang:
                     d = grad_array[:, -2].copy()
                     grad_array[:, -2] = d - normal_projection(theta, *d)
 
             if e_head and e_tail:
                 e_t = e_tail[0]
                 e_h = e_head[0]
-                g_t = grad[e_t][:, -2].copy()
-                g_h = grad[e_h][:, 1].copy()
-                effective = g_t - g_h
-                grad[e_t][:, -2] = effective
-                grad[e_h][:, 1] = -effective
+                if fix_loc:
+                    # Waypoint is fixed; anti-symmetric coupling maintains a + b = 2w = const.
+                    g_t = grad[e_t][:, -2].copy()
+                    g_h = grad[e_h][:, 1].copy()
+                    effective = g_t - g_h
+                    grad[e_t][:, -2] = effective
+                    grad[e_h][:, 1] = -effective
+                else:
+                    # Waypoint is free. Project (a, b, w) jointly onto C^1 surface a + b = 2w.
+                    # grad f = (1, 1, -2), |grad f|^2 = 6; lambda = (g_a + g_b - 2*g_w) / 6.
+                    g_a = grad[e_t][:, -2].copy()
+                    g_b = grad[e_h][:, 1].copy()
+                    g_w = grad[e_t][:, -1].copy() + grad[e_h][:, 0].copy()
+                    lam = (g_a + g_b - 2 * g_w) / 6
+                    grad[e_t][:, -2] = g_a - lam
+                    grad[e_h][:, 1] = g_b - lam
+                    g_w_eff = g_w + 2 * lam
+                    grad[e_t][:, -1] = g_w_eff
+                    grad[e_h][:, 0] = g_w_eff
