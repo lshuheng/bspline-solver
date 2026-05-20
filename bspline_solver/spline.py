@@ -114,6 +114,7 @@ class SplinePath:
         theta: Dict mapping each vertex to its tangent angle.
         fix_location: Dict mapping each vertex to whether its location is fixed.
         fix_angle: Dict mapping each vertex to whether its tangent angle is fixed.
+        cyclic: Whether the path is closed (last vertex connected back to first).
         edges: List of (start_vertex, end_vertex) tuples.
     """
 
@@ -124,6 +125,7 @@ class SplinePath:
         n_bisections: int = 2,
         fix_location: list[bool] | None = None,
         fix_angle: list[bool] | None = None,
+        cyclic: bool = False,
     ) -> None:
         if any(t is None for t in theta):
             raise ValueError("theta must be provided for every vertex")
@@ -132,9 +134,12 @@ class SplinePath:
         self.theta = dict(zip(self.vertex, theta))
         self.fix_location = dict(zip(self.vertex, fix_location if fix_location is not None else [True] * n))
         self.fix_angle = dict(zip(self.vertex, fix_angle if fix_angle is not None else [True] * n))
+        self.cyclic = cyclic
         self.edges = [
             (self.vertex[i], self.vertex[i + 1]) for i in range(len(self.vertex) - 1)
         ]
+        if cyclic:
+            self.edges.append((self.vertex[-1], self.vertex[0]))
         self.vertex_to_edge_head = {
             v: [e for e in self.edges if e[0] == v] for v in self.vertex
         }

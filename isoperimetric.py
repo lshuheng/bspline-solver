@@ -1,4 +1,4 @@
-"""Demo: simulate a hanging chain by minimizing potential energy subject to a fixed-length integral constraint."""
+"""Demo: maximize area enclosed by a curve subject to a fixed-length integral constraint."""
 
 import math
 
@@ -10,23 +10,24 @@ import matplotlib.pyplot as plt
 
 def main() -> None:
     # Symbolic variables matching the Lagrangian2D convention.
-    t = sp.Symbol
+    t = sp.Symbol("t")
     u = sp.Symbol("u")
     v = sp.Symbol("v")
     ut = sp.Symbol("ut")
     vt = sp.Symbol("vt")
     utt = sp.Symbol("utt")
     vtt = sp.Symbol("vtt")
+    
 
     # Waypoints: initial tangent angles are required for initialization;
     # fix_angle=False lets them optimize freely.
-    vertices = [[0, 0], [1, 1], [2, 2]]
-    thetas = [math.pi/4, 0, math.pi/4]
-    path = SplinePath(vertices, thetas, fix_angle=[False, False, False], fix_location=[True, False, True])
+    vertices = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    thetas = [math.pi/4, math.pi/4, math.pi/4, -math.pi/4]
+    path = SplinePath(vertices, thetas, fix_angle=[False, False, False, False], fix_location=[False, False, False, False], cyclic=True)
     control, knot = path.initial_controls()
 
-    target_length = 2.0
-    lagrangian = v * (ut ** 2 + vt ** 2) ** sp.Rational(1, 2)
+    target_length = 2.0 * math.pi
+    lagrangian = -(u * vt - v * ut)/2
     constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length
 
     solver = EnergyMinimizer2D(path, control, knot, lagrangian, constraint)
