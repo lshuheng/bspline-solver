@@ -26,7 +26,7 @@ def main() -> None:
     path = SplinePath(vertices, thetas, fix_angle=[False, False, False, False], fix_location=[False, False, False, False], cyclic=True)
     control, knot = path.initial_controls()
 
-    target_length = 2.0 * math.pi
+    target_length = 2.0 * math.pi / 4.0
     lagrangian = -(u * vt - v * ut)/2
     constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length
 

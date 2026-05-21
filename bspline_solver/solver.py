@@ -161,16 +161,17 @@ class EnergyMinimizer2D:
             def objective(control_flat):
                 control_dict = pack(control_flat, self.spline.edges)
                 energy, gradient, g, dg = self.grad_total(control_dict)
+                g_acc = sum(g.values())
+                aug = self.constraint_multiplier * g_acc + self.constraint_stiffness * (g_acc ** 2) / 2
                 for e in self.spline.edges:
                     if self.constraint is not None:
                         energy[e] += (
-                            self.constraint_multiplier * g[e]
-                            + self.constraint_stiffness * (g[e] ** 2) / 2
+                            aug / len(self.spline.edges)
                         )
                         gradient[e] += (
-                            self.constraint_multiplier * dg[e]
-                            + self.constraint_stiffness * g[e] * dg[e]
-                        )
+                            self.constraint_multiplier
+                            + self.constraint_stiffness * g_acc 
+                        ) * dg[e]
                     if self.reg is not None:
                         energy_reg, gradient_reg = self.reg(control_dict[e])
                         energy[e] += self.reg_stiffness * energy_reg
