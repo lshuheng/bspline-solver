@@ -21,13 +21,13 @@ def main() -> None:
     # Waypoints: initial tangent angles are required for initialization;
     # fix_angle=False lets them optimize freely.
     vertices = [[0, 0], [0.5, 1], [1, 0]]
-    thetas = [0, 0, 0]
-    path = SplinePath(vertices, thetas, fix_angle=[True, False, True], fix_location=[True, True, True])
+    thetas = [0, math.pi/4, 0]
+    path = SplinePath(vertices, thetas, fix_angle=[True, False, True], fix_location=[True, False, True])
     control, knot = path.initial_controls()
 
-    target_length = 2
+    target_length = 3
     lagrangian = 1/2 * (utt ** 2 + vtt ** 2) 
-    constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length
+    constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length / len(path.edges)
 
     solver = EnergyMinimizer2D(path, control, knot, lagrangian, constraint)
 
