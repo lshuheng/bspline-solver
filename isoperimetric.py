@@ -4,40 +4,30 @@ import math
 
 import sympy as sp
 
-from bspline_solver import EnergyMinimizer2D, SplinePath, plot_spline_path
-import matplotlib.pyplot as plt
+from bspline_solver import run_diagnostic
 
 
 def main() -> None:
-    # Symbolic variables matching the Lagrangian2D convention.
-    t = sp.Symbol("t")
     u = sp.Symbol("u")
     v = sp.Symbol("v")
     ut = sp.Symbol("ut")
     vt = sp.Symbol("vt")
-    utt = sp.Symbol("utt")
-    vtt = sp.Symbol("vtt")
-    
 
-    # Waypoints: initial tangent angles are required for initialization;
-    # fix_angle=False lets them optimize freely.
     vertices = [[0, 0], [1, 0], [1, 1], [0, 1]]
-    path = SplinePath(vertices,fix_location=[False, False, False, False], cyclic=True)
-    control, knot = path.initial_controls()
+    target_length = 2.0 * math.pi
+    n_edges = len(vertices)  # cyclic: one edge per vertex
 
-    target_length = 2.0 * math.pi 
-    lagrangian = -(u * vt - v * ut)/2
-    constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length/len(path.edges)
+    lagrangian = -(u * vt - v * ut) / 2
+    constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length / n_edges
 
-    solver = EnergyMinimizer2D(path, control, knot, lagrangian, constraint)
-
-    plot_spline_path(list(control.values()), knot)
-    plt.title("Initial path")
-
-    solver.minimize()
-    plot_spline_path(list(solver.control.values()), knot)
-    plt.title("Optimized path")
-    plt.show()
+    run_diagnostic(
+        vertices=vertices,
+        lagrangian=lagrangian,
+        constraint=constraint,
+        fix_location=[False, False, False, False],
+        cyclic=True,
+        title="Isoperimetric",
+    )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 """Variational B-spline ODE solver for boundary value problems."""
 
+from .diagnostic import run_diagnostic
 from .config import (
     CONSTRAINT_STIFFNESS,
     DEGREE,
@@ -33,5 +34,6 @@ __all__ = [
     "line_init",
     "pack",
     "plot_spline_path",
+    "run_diagnostic",
     "unpack",
 ]

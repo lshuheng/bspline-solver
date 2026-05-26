@@ -154,6 +154,13 @@ class EnergyMinimizer2D:
 
     def minimize(self, max_iteration: int = 50, constraint_tol: float = 1e-4) -> None:
         """Run the augmented-Lagrangian outer loop with L-BFGS-B inner solves."""
+        self.energy_history: list[float] = []
+        self.constraint_history: list[float] = []
+        self.multiplier_history: list[float] = []
+
+        energy_init, _, _, _ = self.grad_total(self.control)
+        self.energy_history.append(float(sum(energy_init.values())))
+
         for _ in range(max_iteration):
             _, _, g_prev, _ = self.grad_total(self.control)
             g_prev_acc = sum(g_prev.values())
@@ -170,7 +177,7 @@ class EnergyMinimizer2D:
                         )
                         gradient[e] += (
                             self.constraint_multiplier
-                            + self.constraint_stiffness * g_acc 
+                            + self.constraint_stiffness * g_acc
                         ) * dg[e]
                     if self.reg is not None:
                         energy_reg, gradient_reg = self.reg(control_dict[e])
@@ -188,16 +195,21 @@ class EnergyMinimizer2D:
             )
             self.control = pack(res.x, self.spline.edges)
 
+            energy_final, _, g_final, _ = self.grad_total(self.control)
+            self.energy_history.append(float(sum(energy_final.values())))
+
             if self.constraint is None:
                 break
 
-            _, _, g_final, _ = self.grad_total(self.control)
             g_final_acc = sum(g_final.values())
+            self.constraint_history.append(float(g_final_acc))
 
             if abs(g_final_acc) < constraint_tol:
+                self.multiplier_history.append(float(self.constraint_multiplier))
                 break
 
             if g_prev_acc != 0 and g_final_acc / g_prev_acc > 0.75:
                 self.constraint_stiffness *= 5
 
             self.constraint_multiplier += self.constraint_stiffness * g_final_acc
+            self.multiplier_history.append(float(self.constraint_multiplier))

@@ -14,6 +14,7 @@ def plot_spline_path(
     knot: np.ndarray,
     control_visible: bool = True,
     resolution: int = 2000,
+    ax=None,
 ):
     """Plot one or more B-spline segments, optionally with control polygons.
 
@@ -22,11 +23,13 @@ def plot_spline_path(
         knot: Shared knot vector for all segments.
         control_visible: Whether to overlay control polygons.
         resolution: Number of sample points per segment for plotting.
+        ax: Existing Axes to plot into; creates a new figure if None.
 
     Returns:
         The matplotlib Axes object.
     """
-    _, ax = plt.subplots()
+    if ax is None:
+        _, ax = plt.subplots()
 
     all_xs = []
     all_ys = []

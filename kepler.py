@@ -1,21 +1,18 @@
 """Demo: simulate kepler orbits"""
 
-import math
-
-import sympy as sp
 import numpy as np
+import sympy as sp
 
-from bspline_solver import EnergyMinimizer2D, SplinePath, plot_spline_path
-import matplotlib.pyplot as plt
+from bspline_solver import run_diagnostic
+
 
 class FixedMass:
-    def __init__(self, center: np.array, mass:float)-> None:
+    def __init__(self, center: np.array, mass: float) -> None:
         self.center = center
         self.mass = mass
 
-def kepler_lagrangian(masses: list[FixedMass], E:float, G: float = 1.0) -> sp.Expr:
-    # Symbolic variables matching the Lagrangian2D convention.
-    t = sp.Symbol
+
+def kepler_lagrangian(masses: list[FixedMass], E: float, G: float = 1.0) -> sp.Expr:
     u = sp.Symbol("u")
     v = sp.Symbol("v")
     ut = sp.Symbol("ut")
@@ -23,35 +20,25 @@ def kepler_lagrangian(masses: list[FixedMass], E:float, G: float = 1.0) -> sp.Ex
     utt = sp.Symbol("utt")
     vtt = sp.Symbol("vtt")
 
-    potential = sum(-G * m.mass / ((u - m.center[0]) ** 2 + (v - m.center[1]) ** 2) ** sp.Rational(1, 2) for m in masses)
+    potential = sum(
+        -G * m.mass / ((u - m.center[0]) ** 2 + (v - m.center[1]) ** 2) ** sp.Rational(1, 2)
+        for m in masses
+    )
     speed = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2)
-    L = (2*E - 2*potential)**sp.Rational(1,2) * speed
-
-    return  L
+    return (2 * E - 2 * potential) ** sp.Rational(1, 2) * speed
 
 
 def main() -> None:
-
-
-    # Waypoints: initial tangent angles are required for initialization;
-    # fix_angle=False lets them optimize freely.
-    vertices = [[1.0, 0], [2.01131479e+00, 3.12100909e-01]]
-    path = SplinePath(vertices)
-    control, knot = path.initial_controls()
-
     E = -1.68
     masses = [FixedMass(np.array([2.0, 0.0]), 2.0)]
     lagrangian = kepler_lagrangian(masses, E)
-   
-    solver = EnergyMinimizer2D(path, control, knot, lagrangian)
 
-    plot_spline_path(list(control.values()), knot)
-    plt.title("Initial path")
-
-    solver.minimize()
-    plot_spline_path(list(solver.control.values()), knot)
-    plt.title("Optimized path")
-    plt.show()
+    run_diagnostic(
+        vertices=[[1.0, 0], [2.01131479e+00, 3.12100909e-01]],
+        lagrangian=lagrangian,
+        reg=None,
+        title="Kepler orbit",
+    )
 
 
 if __name__ == "__main__":
