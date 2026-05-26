@@ -12,7 +12,7 @@ CONSTRAINT_STIFFNESS = 10.0
 REGULARIZATION_STIFFNESS = 10.0
 
 # Scaling factor used when seeding boundary tangents during initialization.
-TANGENT_INIT_SCALE = 5.0
+TANGENT_INIT_SCALE = 1.0
 
 # Shared random number generator for reproducible initialization noise.
 rng = np.random.default_rng()

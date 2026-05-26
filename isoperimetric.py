@@ -22,8 +22,7 @@ def main() -> None:
     # Waypoints: initial tangent angles are required for initialization;
     # fix_angle=False lets them optimize freely.
     vertices = [[0, 0], [1, 0], [1, 1], [0, 1]]
-    thetas = [math.pi/4, math.pi/4, math.pi/4, -math.pi/4]
-    path = SplinePath(vertices, thetas, fix_angle=[False, False, False, False], fix_location=[False, False, False, False], cyclic=True)
+    path = SplinePath(vertices,fix_location=[False, False, False, False], cyclic=True)
     control, knot = path.initial_controls()
 
     target_length = 2.0 * math.pi 

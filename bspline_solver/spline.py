@@ -32,7 +32,7 @@ def knot_interval(start: float, end: float, n_bisections: int = 4) -> np.ndarray
 def line_init(
     boundary_pts: np.ndarray,
     n_bisections: int = 4,
-    std: float = 0.1,
+    std: float = 0.0,
 ) -> np.ndarray:
     """Initialize control points along the chord between two endpoints, with normal jitter.
 
@@ -53,6 +53,7 @@ def line_init(
     ys = points[:, 1]
 
     noise = rng.normal(0.0, std, len(xs))
+   
     noise[0] = 0.0
     noise[-1] = 0.0
     xs = xs - velocity[1] * noise
@@ -121,19 +122,35 @@ class SplinePath:
     def __init__(
         self,
         vertex: list,
-        theta: list[float],
+        theta: list[float] | None = None,
         n_bisections: int = 2,
         fix_location: list[bool] | None = None,
         fix_angle: list[bool] | None = None,
         cyclic: bool = False,
     ) -> None:
-        if any(t is None for t in theta):
-            raise ValueError("theta must be provided for every vertex")
         self.vertex = [tuple(v) for v in vertex]
         n = len(self.vertex)
+
+        if theta is None:
+            pts = [np.array(v) for v in self.vertex]
+            angles = []
+            for i in range(n):
+                if cyclic:
+                    prev = pts[(i - 1) % n]
+                    nxt = pts[(i + 1) % n]
+                    d = nxt - prev
+                elif i == 0:
+                    d = pts[1] - pts[0]
+                elif i == n - 1:
+                    d = pts[-1] - pts[-2]
+                else:
+                    d = pts[i + 1] - pts[i - 1]
+                angles.append(math.atan2(d[1], d[0]))
+            theta = angles
+
         self.theta = dict(zip(self.vertex, theta))
         self.fix_location = dict(zip(self.vertex, fix_location if fix_location is not None else [True] * n))
-        self.fix_angle = dict(zip(self.vertex, fix_angle if fix_angle is not None else [True] * n))
+        self.fix_angle = dict(zip(self.vertex, fix_angle if fix_angle is not None else [False] * n))
         self.cyclic = cyclic
         self.edges = [
             (self.vertex[i], self.vertex[i + 1]) for i in range(len(self.vertex) - 1)
