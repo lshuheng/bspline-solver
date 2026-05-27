@@ -6,19 +6,22 @@ import sympy as sp
 
 from bspline_solver import run_diagnostic
 
-
-def main() -> None:
+def isoperimetric_lagrangian(target_length: float, n_edges: int) -> sp.Expr:
     u = sp.Symbol("u")
     v = sp.Symbol("v")
     ut = sp.Symbol("ut")
     vt = sp.Symbol("vt")
 
-    vertices = [[0, 0], [1, 0], [1, 1], [0, 1]]
-    target_length = 2.0 * math.pi
-    n_edges = len(vertices)  # cyclic: one edge per vertex
-
     lagrangian = -(u * vt - v * ut) / 2
     constraint = (ut ** 2 + vt ** 2) ** sp.Rational(1, 2) - target_length / n_edges
+    return lagrangian, constraint
+
+
+def main() -> None:
+    vertices = [[0, 0], [1, 0], [1, 1], [0, 1]]
+    target_length = 2.0 * math.pi
+    n_edges = len(vertices)  
+    lagrangian, constraint = isoperimetric_lagrangian(target_length, n_edges)
 
     run_diagnostic(
         vertices=vertices,

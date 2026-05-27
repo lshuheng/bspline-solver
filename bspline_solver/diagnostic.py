@@ -23,7 +23,7 @@ def run_diagnostic(
     cyclic: bool = False,
     n_bisections: int = 2,
     n_quad: int = 5,
-    reg: Optional[Callable] = control_variance,
+    reg: Optional[Callable] = None,
     max_iteration: int = 50,
     constraint_tol: float = 1e-4,
     title: Optional[str] = None,

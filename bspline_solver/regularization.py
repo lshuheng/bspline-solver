@@ -7,6 +7,51 @@ import numpy as np
 _EPS = 1e-10
 
 
+def tangent_speed(control: np.ndarray) -> tuple[float, np.ndarray]:
+    """Reciprocal-speed barrier on endpoint tangent differences.
+
+    At interior vertices the optimizer can satisfy C^1 continuity trivially by
+    sliding both flanking control points toward the vertex (a → w, b → w), so
+    that a + b = 2w holds with zero tangent speed.  This barrier blocks that
+    path: it grows without bound as either endpoint difference collapses to zero
+    and is negligible when tangent speeds are normal.
+
+    For a segment with control points c_0, ..., c_{n-1} (n >= 4):
+        d_start = c_1 - c_0,   d_end = c_{n-1} - c_{n-2}
+        E = 1 / (||d_start||^2 + eps) + 1 / (||d_end||^2 + eps)
+
+    Args:
+        control: Array of shape (2, n) containing control-point coordinates.
+
+    Returns:
+        Tuple of (E, dE/dcontrol), with the gradient matching the input shape.
+    """
+    c = np.asarray(control, dtype=float).reshape(2, -1)
+
+    d_start = c[:, 1] - c[:, 0]    # shape (2,)
+    d_end   = c[:, -1] - c[:, -2]  # shape (2,)
+
+    s_start = float(np.dot(d_start, d_start))
+    s_end   = float(np.dot(d_end,   d_end))
+
+    denom_start = s_start + _EPS
+    denom_end   = s_end   + _EPS
+
+    energy = 1.0 / denom_start + 1.0 / denom_end
+
+    # dE / d(d) = -2 d / denom^2  (quotient rule on 1 / (||d||^2 + eps))
+    dE_dstart = -2.0 * d_start / (denom_start ** 2)
+    dE_dend   = -2.0 * d_end   / (denom_end   ** 2)
+
+    grad = np.zeros_like(c)
+    grad[:, 1]  += dE_dstart   # d_start = c_1 - c_0
+    grad[:, 0]  -= dE_dstart
+    grad[:, -1] += dE_dend     # d_end   = c_{n-1} - c_{n-2}
+    grad[:, -2] -= dE_dend
+
+    return energy, grad
+
+
 def control_variance(control: np.ndarray) -> tuple[float, np.ndarray]:
     """Variance of squared consecutive control-point spacings, plus its gradient.
 

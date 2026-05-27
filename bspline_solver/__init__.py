@@ -8,7 +8,7 @@ from .config import (
     TANGENT_INIT_SCALE,
 )
 from .lagrangian import Lagrangian2D
-from .regularization import control_variance
+from .regularization import control_variance, tangent_speed
 from .solver import EnergyMinimizer2D, pack, unpack
 from .spline import (
     SplinePath,
@@ -29,6 +29,7 @@ __all__ = [
     "TANGENT_INIT_SCALE",
     "control_len",
     "control_variance",
+    "tangent_speed",
     "initialize_segment",
     "knot_interval",
     "line_init",
