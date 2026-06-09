@@ -10,3 +10,6 @@ env/
 
 # IDE files
 .vscode/
+
+# Generated experiment results
+outputs/

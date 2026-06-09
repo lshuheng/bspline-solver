@@ -1,4 +1,4 @@
-"""Demo: maximize enclosed area at fixed total curve length."""
+"""Demo: minimize beam bending energy at fixed total length."""
 
 import math
 
@@ -13,28 +13,29 @@ from bspline_solver import (
 )
 
 
-def make_isoperimetric_problem(target_length: float) -> VariationalProblem:
-    u, v, ut, vt = sp.symbols("u v ut vt")
+def make_beam_buckling_problem(target_length: float) -> VariationalProblem:
+    ut, vt, utt, vtt = sp.symbols("ut vt utt vtt")
     speed = (ut**2 + vt**2) ** sp.Rational(1, 2)
     return VariationalProblem(
-        name="isoperimetric",
-        lagrangian=-(u * vt - v * ut) / 2,
+        name="beam_buckling",
+        lagrangian=sp.Rational(1, 2) * (utt**2 + vtt**2),
         constraint=speed,
         constraint_target=target_length,
-        title="Isoperimetric",
+        title="Beam buckling",
         metadata={"target_length": target_length},
     )
 
 
 def main() -> None:
-    dataset = load_dataset("isoperimetric")
-    problem = make_isoperimetric_problem(target_length=2.0 * math.pi)
+    dataset = load_dataset("beam_buckling")
+    problem = make_beam_buckling_problem(target_length=3.0)
     result = solve_experiment(
         dataset,
         problem,
         ExperimentConfig(
-            fix_location=[False, False, False, False],
-            cyclic=True,
+            theta=[0.0, math.pi / 4, 0.0],
+            fix_angle=[True, False, True],
+            fix_location=[True, False, True],
         ),
     )
     plot_result(result)

@@ -9,7 +9,7 @@ DEGREE = 3
 CONSTRAINT_STIFFNESS = 10.0
 
 # Stiffness for the control-point regularization term.
-REGULARIZATION_STIFFNESS = 0.001
+REGULARIZATION_STIFFNESS = 10.0
 
 # Scaling factor used when seeding boundary tangents during initialization.
 TANGENT_INIT_SCALE = 1.0

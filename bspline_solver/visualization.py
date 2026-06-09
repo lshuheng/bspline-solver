@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import BSpline
 
 from .config import DEGREE
 
+if TYPE_CHECKING:
+    from .experiment import ExperimentResult
+
 
 def plot_spline_path(
     segments: list,
     knot: np.ndarray,
-    control_visible: bool = True,
+    control_visible: bool = False,
     resolution: int = 2000,
     ax=None,
 ):
@@ -72,3 +77,96 @@ def plot_spline_path(
     ax.set_ylim(y_min - pad_y, y_max + pad_y)
     ax.set_aspect("equal")
     return ax
+
+
+def plot_result(result: "ExperimentResult", show: bool = True):
+    """Plot initial/optimized paths and convergence diagnostics."""
+    has_constraint = result.problem_metadata["constraint"] is not None
+    n_cols = 3 + (2 if has_constraint else 0)
+    fig, axes = plt.subplots(1, n_cols, figsize=(5 * n_cols, 5))
+
+    plot_spline_path(result.initial_controls, result.knot, ax=axes[0])
+    _plot_reference_data(result, axes[0])
+    axes[0].set_title("Initial path")
+
+    plot_spline_path(result.optimized_controls, result.knot, ax=axes[1])
+    _plot_reference_data(result, axes[1])
+    axes[1].set_title("Optimized path")
+
+    axes[2].plot(
+        range(len(result.energy_history)),
+        result.energy_history,
+        marker="o",
+        markersize=3,
+    )
+    axes[2].set_title("Energy")
+    axes[2].set_xlabel("Iteration")
+    axes[2].set_ylabel("Energy")
+
+    if has_constraint:
+        axes[3].plot(
+            range(1, len(result.constraint_history) + 1),
+            result.constraint_history,
+            marker="o",
+            markersize=3,
+            color="tomato",
+        )
+        axes[3].set_title("Constraint violation")
+        axes[3].set_xlabel("Outer iteration")
+        axes[3].set_ylabel("g")
+
+        axes[4].plot(
+            range(1, len(result.multiplier_history) + 1),
+            result.multiplier_history,
+            marker="o",
+            markersize=3,
+            color="steelblue",
+        )
+        final_multiplier = (
+            result.multiplier_history[-1]
+            if len(result.multiplier_history)
+            else 0.0
+        )
+        axes[4].set_title(
+            f"Constraint multiplier\n(final = {final_multiplier:.4g})"
+        )
+        axes[4].set_xlabel("Outer iteration")
+        axes[4].set_ylabel("lambda")
+
+    fig.suptitle(result.title)
+    fig.tight_layout()
+    if show:
+        plt.show()
+    return fig, axes
+
+
+def _plot_reference_data(result: "ExperimentResult", ax) -> None:
+    reference_points = [result.vertices]
+    if result.trajectory is not None:
+        ax.plot(
+            result.trajectory[:, 0],
+            result.trajectory[:, 1],
+            "--",
+            color="0.45",
+            linewidth=1.0,
+            label="Ground truth",
+        )
+        reference_points.append(result.trajectory)
+    ax.scatter(
+        result.vertices[:, 0],
+        result.vertices[:, 1],
+        color="black",
+        s=18,
+        zorder=4,
+        label="Interpolation vertices",
+    )
+    if result.trajectory is not None:
+        ax.legend()
+
+    points = np.concatenate(reference_points)
+    x_min, y_min = points.min(axis=0)
+    x_max, y_max = points.max(axis=0)
+    current_x = ax.get_xlim()
+    current_y = ax.get_ylim()
+    ax.set_xlim(min(current_x[0], x_min), max(current_x[1], x_max))
+    ax.set_ylim(min(current_y[0], y_min), max(current_y[1], y_max))
