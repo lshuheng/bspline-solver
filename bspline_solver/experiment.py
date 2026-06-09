@@ -61,7 +61,6 @@ class ExperimentResult:
     title: str
     vertices: np.ndarray
     trajectory: Optional[np.ndarray]
-    time: Optional[np.ndarray]
     initial_controls: list[np.ndarray]
     optimized_controls: list[np.ndarray]
     knot: np.ndarray
@@ -148,7 +147,6 @@ def solve_experiment(
         trajectory=(
             None if dataset.trajectory is None else dataset.trajectory.copy()
         ),
-        time=None if dataset.time is None else dataset.time.copy(),
         initial_controls=[control[edge].copy() for edge in path.edges],
         optimized_controls=[
             solver.control[edge].copy() for edge in path.edges
@@ -216,8 +214,6 @@ def save_result(
     }
     if result.trajectory is not None:
         arrays["trajectory"] = result.trajectory
-    if result.time is not None:
-        arrays["time"] = result.time
     for index, control in enumerate(result.initial_controls):
         arrays[f"initial_control_{index:03d}"] = control
     for index, control in enumerate(result.optimized_controls):

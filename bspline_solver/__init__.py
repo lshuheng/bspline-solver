@@ -6,7 +6,7 @@ from .config import (
     REGULARIZATION_STIFFNESS,
     TANGENT_INIT_SCALE,
 )
-from .datasets import TrajectoryDataset, generate_ground_truth, load_dataset
+from .datasets import TrajectoryDataset, load_dataset
 from .experiment import (
     ExperimentConfig,
     ExperimentResult,
@@ -15,6 +15,7 @@ from .experiment import (
     solve_experiment,
 )
 from .lagrangian import Lagrangian2D
+from .ground_truth import ground_truth_kepler
 from .regularization import control_variance
 from .solver import EnergyMinimizer2D, pack, unpack
 from .spline import (
@@ -40,7 +41,7 @@ __all__ = [
     "VariationalProblem",
     "control_len",
     "control_variance",
-    "generate_ground_truth",
+    "ground_truth_kepler",
     "initialize_segment",
     "knot_interval",
     "line_init",

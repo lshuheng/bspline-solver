@@ -12,14 +12,13 @@ import numpy as np
 class TrajectoryDataset:
     """Trajectory observations used by one interpolation experiment.
 
-    Dense trajectory samples and their time grid are optional while datasets are
-    curated manually. Interpolation vertices are always required.
+    Dense trajectory samples are optional while datasets are curated manually.
+    Interpolation vertices are always required.
     """
 
     name: str
     vertices: np.ndarray
     trajectory: Optional[np.ndarray] = None
-    time: Optional[np.ndarray] = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -29,21 +28,9 @@ class TrajectoryDataset:
             if self.trajectory is None
             else _points_array(self.trajectory, "trajectory")
         )
-        time = (
-            None
-            if self.time is None
-            else np.asarray(self.time, dtype=float).copy()
-        )
-
-        if time is not None:
-            if trajectory is None:
-                raise ValueError("time requires a dense trajectory")
-            if time.ndim != 1 or len(time) != len(trajectory):
-                raise ValueError("time must be one-dimensional and match trajectory")
 
         object.__setattr__(self, "vertices", vertices)
         object.__setattr__(self, "trajectory", trajectory)
-        object.__setattr__(self, "time", time)
         object.__setattr__(self, "metadata", dict(self.metadata))
 
 
@@ -79,14 +66,5 @@ def load_dataset(name: str) -> TrajectoryDataset:
         name=name,
         vertices=record["vertices"],
         trajectory=record.get("trajectory"),
-        time=record.get("time"),
         metadata=record.get("metadata", {}),
-    )
-
-
-def generate_ground_truth(*args: Any, **kwargs: Any) -> TrajectoryDataset:
-    """Future interface for numerical trajectory generation."""
-    raise NotImplementedError(
-        "Ground-truth generation is not implemented; use load_dataset() with "
-        "manually curated trajectory data."
     )

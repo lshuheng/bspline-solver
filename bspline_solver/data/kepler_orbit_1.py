@@ -22,5 +22,11 @@ DATASET = {
         "description": "Sparse samples from a two-center Kepler trajectory.",
         "source": "manually copied",
         "ground_truth_available": False,
+        "energy": -0.32766314,
+        "gravitational_constant": 1.0,
+        "masses": [
+            {"center": [-1.2, 0.0], "mass": 1.0},
+            {"center": [1.2, 0.0], "mass": 1.0},
+        ],
     },
 }

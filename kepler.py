@@ -4,6 +4,7 @@ import sympy as sp
 
 from bspline_solver import (
     ExperimentConfig,
+    TrajectoryDataset,
     VariationalProblem,
     load_dataset,
     plot_result,
@@ -11,18 +12,22 @@ from bspline_solver import (
 )
 
 
-def make_kepler_problem(
-    energy: float,
-    masses: list[tuple[float, float, float]],
-    gravitational_constant: float = 1.0,
-) -> VariationalProblem:
+def make_kepler_problem(dataset: TrajectoryDataset) -> VariationalProblem:
     """Create the Jacobi-Maupertuis objective for fixed point masses."""
+    energy = dataset.metadata["energy"]
+    masses = dataset.metadata["masses"]
+    gravitational_constant = dataset.metadata["gravitational_constant"]
+
     u, v, ut, vt = sp.symbols("u v ut vt")
     potential = sum(
         -gravitational_constant
-        * mass
-        / ((u - x) ** 2 + (v - y) ** 2) ** sp.Rational(1, 2)
-        for x, y, mass in masses
+        * fixed_mass["mass"]
+        / (
+            (u - fixed_mass["center"][0]) ** 2
+            + (v - fixed_mass["center"][1]) ** 2
+        )
+        ** sp.Rational(1, 2)
+        for fixed_mass in masses
     )
     speed = (ut**2 + vt**2) ** sp.Rational(1, 2)
     return VariationalProblem(
@@ -34,23 +39,14 @@ def make_kepler_problem(
         metadata={
             "energy": energy,
             "gravitational_constant": gravitational_constant,
-            "masses": [
-                {"center": [x, y], "mass": mass}
-                for x, y, mass in masses
-            ],
+            "masses": masses,
         },
     )
 
 
 def main() -> None:
     dataset = load_dataset("kepler_orbit_1")
-    problem = make_kepler_problem(
-        energy=-0.32766314,
-        masses=[
-            (-1.2, 0.0, 1.0),
-            (1.2, 0.0, 1.0),
-        ],
-    )
+    problem = make_kepler_problem(dataset)
     result = solve_experiment(
         dataset,
         problem,

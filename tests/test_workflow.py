@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import sympy as sp
@@ -10,7 +11,7 @@ from bspline_solver import (
     ExperimentConfig,
     TrajectoryDataset,
     VariationalProblem,
-    generate_ground_truth,
+    ground_truth_kepler,
     load_dataset,
     save_result,
     solve_experiment,
@@ -24,18 +25,52 @@ class DatasetTests(unittest.TestCase):
         self.assertEqual(dataset.vertices.shape, (15, 2))
         self.assertIsNone(dataset.trajectory)
         self.assertFalse(dataset.metadata["ground_truth_available"])
+        self.assertEqual(dataset.metadata["energy"], -0.32766314)
+        self.assertEqual(len(dataset.metadata["masses"]), 2)
 
-    def test_rejects_time_without_trajectory(self):
-        with self.assertRaisesRegex(ValueError, "time requires"):
+    def test_rejects_invalid_trajectory_shape(self):
+        with self.assertRaisesRegex(ValueError, "trajectory must have shape"):
             TrajectoryDataset(
                 name="invalid",
                 vertices=[[0.0, 0.0], [1.0, 1.0]],
-                time=[0.0, 1.0],
+                trajectory=[0.0, 1.0],
             )
 
-    def test_ground_truth_generation_is_explicitly_unimplemented(self):
+    def test_kepler_ivp_solver_is_explicitly_unimplemented(self):
         with self.assertRaises(NotImplementedError):
-            generate_ground_truth("kepler")
+            ground_truth_kepler(
+                masses=[{"center": [0.0, 0.0], "mass": 1.0}],
+                gravitational_constant=1.0,
+                initial_position=[1.0, 0.0],
+                initial_velocity=[0.0, 1.0],
+                t_span=(0.0, 1.0),
+                n_vertices=3,
+                n_dense=5,
+            )
+
+    @patch("bspline_solver.ground_truth._solve_kepler_ivp")
+    def test_kepler_ground_truth_subsamples_dense_trajectory(self, solve_ivp):
+        trajectory = np.column_stack(
+            [np.arange(9, dtype=float), -np.arange(9, dtype=float)]
+        )
+        solve_ivp.return_value = trajectory, -0.5
+
+        dataset = ground_truth_kepler(
+            masses=[{"center": [0.0, 0.0], "mass": 2.0}],
+            gravitational_constant=1.0,
+            initial_position=[1.0, 0.0],
+            initial_velocity=[0.0, 1.0],
+            t_span=(0.0, 8.0),
+            n_vertices=3,
+            n_dense=9,
+            name="test_orbit",
+        )
+
+        np.testing.assert_allclose(dataset.trajectory, trajectory)
+        np.testing.assert_allclose(dataset.vertices, trajectory[[0, 4, 8]])
+        self.assertEqual(dataset.metadata["energy"], -0.5)
+        self.assertEqual(dataset.metadata["sample_indices"], [0, 4, 8])
+        self.assertTrue(dataset.metadata["ground_truth_available"])
 
 
 class ExperimentTests(unittest.TestCase):
