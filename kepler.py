@@ -1,12 +1,14 @@
-"""Demo: reconstruct a manually supplied two-center Kepler trajectory."""
+"""Demo: reconstruct a generated two-center Kepler trajectory."""
 
+import numpy as np
 import sympy as sp
 
 from bspline_solver import (
     ExperimentConfig,
+    FixedMass,
     TrajectoryDataset,
     VariationalProblem,
-    load_dataset,
+    ground_truth_kepler,
     plot_result,
     solve_experiment,
 )
@@ -45,12 +47,24 @@ def make_kepler_problem(dataset: TrajectoryDataset) -> VariationalProblem:
 
 
 def main() -> None:
-    dataset = load_dataset("kepler_orbit_1")
+    dataset = ground_truth_kepler(
+        masses=[
+            FixedMass(center=np.array([-1.2, 0.0]), mass=1.0),
+            FixedMass(center=np.array([1.2, 0.0]), mass=1.0),
+        ],
+        gravitational_constant=1.0,
+        initial_position=[0.0, 4.0],
+        initial_velocity=[-0.6, 0.0],
+        t_span=(0.0, 30.0),
+        n_vertices=5,
+        n_dense=2000,
+        name="generated_kepler_orbit",
+    )
     problem = make_kepler_problem(dataset)
     result = solve_experiment(
         dataset,
         problem,
-        ExperimentConfig(geometric_init=True),
+        ExperimentConfig(geometric_init=False),
     )
     plot_result(result)
 

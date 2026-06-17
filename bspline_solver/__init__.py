@@ -15,7 +15,7 @@ from .experiment import (
     solve_experiment,
 )
 from .lagrangian import Lagrangian2D
-from .ground_truth import ground_truth_kepler
+from .ground_truth import FixedMass, ground_truth_kepler
 from .regularization import control_variance
 from .solver import EnergyMinimizer2D, pack, unpack
 from .spline import (
@@ -33,6 +33,7 @@ __all__ = [
     "EnergyMinimizer2D",
     "ExperimentConfig",
     "ExperimentResult",
+    "FixedMass",
     "Lagrangian2D",
     "REGULARIZATION_STIFFNESS",
     "SplinePath",

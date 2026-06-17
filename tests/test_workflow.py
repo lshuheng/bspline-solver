@@ -36,17 +36,22 @@ class DatasetTests(unittest.TestCase):
                 trajectory=[0.0, 1.0],
             )
 
-    def test_kepler_ivp_solver_is_explicitly_unimplemented(self):
-        with self.assertRaises(NotImplementedError):
-            ground_truth_kepler(
-                masses=[{"center": [0.0, 0.0], "mass": 1.0}],
-                gravitational_constant=1.0,
-                initial_position=[1.0, 0.0],
-                initial_velocity=[0.0, 1.0],
-                t_span=(0.0, 1.0),
-                n_vertices=3,
-                n_dense=5,
-            )
+    def test_kepler_ivp_solver_generates_circular_orbit(self):
+        dataset = ground_truth_kepler(
+            masses=[{"center": [0.0, 0.0], "mass": 1.0}],
+            gravitational_constant=1.0,
+            initial_position=[1.0, 0.0],
+            initial_velocity=[0.0, 1.0],
+            t_span=(0.0, 2.0 * np.pi),
+            n_vertices=5,
+            n_dense=33,
+        )
+
+        self.assertEqual(dataset.trajectory.shape, (33, 2))
+        self.assertEqual(dataset.vertices.shape, (5, 2))
+        self.assertAlmostEqual(dataset.metadata["energy"], -0.5)
+        np.testing.assert_allclose(dataset.trajectory[0], [1.0, 0.0])
+        np.testing.assert_allclose(dataset.trajectory[-1], [1.0, 0.0], atol=1e-8)
 
     @patch("bspline_solver.ground_truth._solve_kepler_ivp")
     def test_kepler_ground_truth_subsamples_dense_trajectory(self, solve_ivp):

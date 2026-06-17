@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.interpolate import BSpline
+from scipy.interpolate import BSpline, make_interp_spline
 
 from .config import DEGREE
 
@@ -39,7 +39,7 @@ def plot_spline_path(
     all_xs = []
     all_ys = []
 
-    for control in segments:
+    for index, control in enumerate(segments):
         c1, c2 = control
         uniq_knot = np.unique(knot)
 
@@ -54,7 +54,12 @@ def plot_spline_path(
         sx_plot = sx[mask]
         sy_plot = sy[mask]
 
-        ax.plot(sx_plot, sy_plot)
+        ax.plot(
+            sx_plot,
+            sy_plot,
+            color="tab:orange",
+            label="Interpolated trajectory" if index == 0 else "_nolegend_",
+        )
 
         all_xs.append(sx_plot)
         all_xs.append(c1)
@@ -79,62 +84,110 @@ def plot_spline_path(
     return ax
 
 
-def plot_result(result: "ExperimentResult", show: bool = True):
+def plot_scipy_spline_path(
+    vertices: np.ndarray,
+    resolution: int = 2000,
+    ax=None,
+):
+    """Plot SciPy's parametric interpolating spline through the vertices."""
+    if ax is None:
+        _, ax = plt.subplots()
+
+    points = np.asarray(vertices, dtype=float)
+    distances = np.linalg.norm(np.diff(points, axis=0), axis=1)
+    parameter = np.concatenate([[0.0], np.cumsum(distances)])
+    keep = np.concatenate([[True], np.diff(parameter) > 0.0])
+    points = points[keep]
+    parameter = parameter[keep]
+    if len(points) < 2:
+        raise ValueError("at least two distinct vertices are required")
+
+    parameter = parameter / parameter[-1]
+    degree = min(3, len(points) - 1)
+    spline = make_interp_spline(parameter, points, k=degree, axis=0)
+    sample_t = np.linspace(0.0, 1.0, int(resolution))
+    sample_points = spline(sample_t)
+
+    ax.plot(
+        sample_points[:, 0],
+        sample_points[:, 1],
+        color="tab:orange",
+        label="Interpolated trajectory",
+    )
+    x_min, y_min = sample_points.min(axis=0)
+    x_max, y_max = sample_points.max(axis=0)
+    pad_x = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
+    pad_y = (y_max - y_min) * 0.05 if y_max > y_min else 1.0
+    ax.set_xlim(x_min - pad_x, x_max + pad_x)
+    ax.set_ylim(y_min - pad_y, y_max + pad_y)
+    ax.set_aspect("equal")
+    return ax
+
+
+def plot_result(result: "ExperimentResult", diagnostic_mode = False, show: bool = True):
     """Plot initial/optimized paths and convergence diagnostics."""
     has_constraint = result.problem_metadata["constraint"] is not None
-    n_cols = 3 + (2 if has_constraint else 0)
+    n_path_plots = 3
+    n_cols = n_path_plots + (1 if diagnostic_mode else 0) + (2 if has_constraint and diagnostic_mode else 0)
     fig, axes = plt.subplots(1, n_cols, figsize=(5 * n_cols, 5))
 
     plot_spline_path(result.initial_controls, result.knot, ax=axes[0])
     _plot_reference_data(result, axes[0])
-    axes[0].set_title("Initial path")
+    axes[0].set_title("Linear Interpolation")
 
-    plot_spline_path(result.optimized_controls, result.knot, ax=axes[1])
+    plot_scipy_spline_path(result.vertices, ax=axes[1])
     _plot_reference_data(result, axes[1])
-    axes[1].set_title("Optimized path")
+    axes[1].set_title("SciPy spline interpolation")
 
-    axes[2].plot(
-        range(len(result.energy_history)),
-        result.energy_history,
-        marker="o",
-        markersize=3,
-    )
-    axes[2].set_title("Energy")
-    axes[2].set_xlabel("Iteration")
-    axes[2].set_ylabel("Energy")
+    plot_spline_path(result.optimized_controls, result.knot, ax=axes[2])
+    _plot_reference_data(result, axes[2])
+    axes[2].set_title("Physics-based interpolation")
 
-    if has_constraint:
+    if diagnostic_mode:
+
         axes[3].plot(
-            range(1, len(result.constraint_history) + 1),
-            result.constraint_history,
+            range(len(result.energy_history)),
+            result.energy_history,
             marker="o",
             markersize=3,
-            color="tomato",
         )
-        axes[3].set_title("Constraint violation")
-        axes[3].set_xlabel("Outer iteration")
-        axes[3].set_ylabel("g")
+        axes[3].set_title("Energy")
+        axes[3].set_xlabel("Iteration")
+        axes[3].set_ylabel("Energy")
 
-        axes[4].plot(
-            range(1, len(result.multiplier_history) + 1),
-            result.multiplier_history,
-            marker="o",
-            markersize=3,
-            color="steelblue",
-        )
-        final_multiplier = (
-            result.multiplier_history[-1]
-            if len(result.multiplier_history)
-            else 0.0
-        )
-        axes[4].set_title(
-            f"Constraint multiplier\n(final = {final_multiplier:.4g})"
-        )
-        axes[4].set_xlabel("Outer iteration")
-        axes[4].set_ylabel("lambda")
+        if has_constraint:
+            axes[4].plot(
+                range(1, len(result.constraint_history) + 1),
+                result.constraint_history,
+                marker="o",
+                markersize=3,
+                color="tomato",
+            )
+            axes[4].set_title("Constraint violation")
+            axes[4].set_xlabel("Outer iteration")
+            axes[4].set_ylabel("g")
 
-    fig.suptitle(result.title)
-    fig.tight_layout()
+            axes[5].plot(
+                range(1, len(result.multiplier_history) + 1),
+                result.multiplier_history,
+                marker="o",
+                markersize=3,
+                color="steelblue",
+            )
+            final_multiplier = (
+                result.multiplier_history[-1]
+                if len(result.multiplier_history)
+                else 0.0
+            )
+            axes[5].set_title(
+                f"Constraint multiplier\n(final = {final_multiplier:.4g})"
+            )
+            axes[5].set_xlabel("Outer iteration")
+            axes[5].set_ylabel("lambda")
+
+    fig.suptitle(f"{len(result.vertices)} interpolation points")
+    _add_shared_path_legend(fig, axes[:n_path_plots])
+    fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.94))
     if show:
         plt.show()
     return fig, axes
@@ -143,30 +196,86 @@ def plot_result(result: "ExperimentResult", show: bool = True):
 def _plot_reference_data(result: "ExperimentResult", ax) -> None:
     reference_points = [result.vertices]
     if result.trajectory is not None:
+        trajectory = np.asarray(result.trajectory, dtype=float)
         ax.plot(
-            result.trajectory[:, 0],
-            result.trajectory[:, 1],
+            trajectory[:, 0],
+            trajectory[:, 1],
             "--",
-            color="0.45",
+            color="tab:blue",
             linewidth=1.0,
-            label="Ground truth",
+            label="Dense trajectory",
         )
-        reference_points.append(result.trajectory)
+        reference_points.append(trajectory)
     ax.scatter(
         result.vertices[:, 0],
         result.vertices[:, 1],
         color="black",
         s=18,
         zorder=4,
-        label="Interpolation vertices",
+        label="Interpolation points",
     )
-    if result.trajectory is not None:
-        ax.legend()
+    ax.scatter(
+        result.vertices[0, 0],
+        result.vertices[0, 1],
+        facecolors="none",
+        edgecolors="tab:green",
+        marker="o",
+        s=80,
+        linewidths=1.8,
+        zorder=5,
+        label="First interpolation point",
+    )
+    ax.scatter(
+        result.vertices[-1, 0],
+        result.vertices[-1, 1],
+        color="tab:red",
+        marker="x",
+        s=80,
+        linewidths=1.8,
+        zorder=5,
+        label="Last interpolation point",
+    )
 
     points = np.concatenate(reference_points)
     x_min, y_min = points.min(axis=0)
     x_max, y_max = points.max(axis=0)
     current_x = ax.get_xlim()
     current_y = ax.get_ylim()
-    ax.set_xlim(min(current_x[0], x_min), max(current_x[1], x_max))
-    ax.set_ylim(min(current_y[0], y_min), max(current_y[1], y_max))
+    x_min = min(current_x[0], x_min)
+    x_max = max(current_x[1], x_max)
+    y_min = min(current_y[0], y_min)
+    y_max = max(current_y[1], y_max)
+    pad_x = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
+    pad_y = (y_max - y_min) * 0.05 if y_max > y_min else 1.0
+    ax.set_xlim(x_min - pad_x, x_max + pad_x)
+    ax.set_ylim(y_min - pad_y, y_max + pad_y)
+    ax.set_aspect("equal")
+
+
+def _add_shared_path_legend(fig, axes) -> None:
+    handles_by_label = {}
+    for ax in axes:
+        handles, labels = ax.get_legend_handles_labels()
+        for handle, label in zip(handles, labels):
+            if label and not label.startswith("_"):
+                handles_by_label.setdefault(label, handle)
+    if not handles_by_label:
+        return
+
+    ordered_labels = [
+        "Dense trajectory",
+        "Interpolation points",
+        "First interpolation point",
+        "Last interpolation point",
+        "Interpolated trajectory",
+    ]
+    labels = [label for label in ordered_labels if label in handles_by_label]
+    handles = [handles_by_label[label] for label in labels]
+    fig.legend(
+        handles,
+        labels,
+        loc="lower center",
+        ncol=len(labels),
+        frameon=False,
+        bbox_to_anchor=(0.5, 0.0),
+    )
