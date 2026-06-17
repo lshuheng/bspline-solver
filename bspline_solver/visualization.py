@@ -125,8 +125,8 @@ def plot_scipy_spline_path(
 
 
 def plot_result(result: "ExperimentResult", diagnostic_mode = False, show: bool = True):
-    """Plot initial/optimized paths and convergence diagnostics."""
-    has_constraint = result.problem_metadata["constraint"] is not None
+    """Plot initial/optimized paths and optional convergence traces."""
+    has_constraint = result.has_constraint
     n_path_plots = 3
     n_cols = n_path_plots + (1 if diagnostic_mode else 0) + (2 if has_constraint and diagnostic_mode else 0)
     fig, axes = plt.subplots(1, n_cols, figsize=(5 * n_cols, 5))

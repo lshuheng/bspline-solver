@@ -19,8 +19,6 @@ def make_hanging_chain_problem(target_length: float) -> VariationalProblem:
         lagrangian=v * speed,
         constraint=speed,
         constraint_target=target_length,
-        title="Hanging chain",
-        metadata={"target_length": target_length},
     )
 
 

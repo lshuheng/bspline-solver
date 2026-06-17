@@ -21,8 +21,6 @@ def make_beam_buckling_problem(target_length: float) -> VariationalProblem:
         lagrangian=sp.Rational(1, 2) * (utt**2 + vtt**2),
         constraint=speed,
         constraint_target=target_length,
-        title="Beam buckling",
-        metadata={"target_length": target_length},
     )
 
 

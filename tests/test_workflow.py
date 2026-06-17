@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -14,20 +11,18 @@ from bspline_solver import (
     ground_truth,
     ground_truth_kepler,
     load_dataset,
-    save_result,
     solve_experiment,
+    solve_sampling_experiments,
 )
 
 
 class DatasetTests(unittest.TestCase):
-    def test_loads_manual_kepler_vertices(self):
-        dataset = load_dataset("kepler_orbit_1")
+    def test_loads_manual_basic_vertices(self):
+        dataset = load_dataset("hanging_chain")
 
-        self.assertEqual(dataset.vertices.shape, (15, 2))
+        self.assertEqual(dataset.vertices.shape, (3, 2))
         self.assertIsNone(dataset.trajectory)
-        self.assertFalse(dataset.metadata["ground_truth_available"])
-        self.assertEqual(dataset.metadata["energy"], -0.32766314)
-        self.assertEqual(len(dataset.metadata["masses"]), 2)
+        self.assertEqual(dataset.metadata["source"], "manually curated")
 
     def test_rejects_invalid_trajectory_shape(self):
         with self.assertRaisesRegex(ValueError, "trajectory must have shape"):
@@ -197,7 +192,7 @@ class DatasetTests(unittest.TestCase):
 
 
 class ExperimentTests(unittest.TestCase):
-    def test_solves_and_persists_solver_independent_result(self):
+    def test_solves_solver_independent_result(self):
         dataset = TrajectoryDataset(
             name="line",
             vertices=[[0.0, 0.0], [1.0, 0.0]],
@@ -207,7 +202,6 @@ class ExperimentTests(unittest.TestCase):
         problem = VariationalProblem(
             name="shortest_path",
             lagrangian=ut**2 + vt**2,
-            title="Shortest path",
         )
 
         result = solve_experiment(
@@ -216,32 +210,35 @@ class ExperimentTests(unittest.TestCase):
             ExperimentConfig(n_bisections=1, n_quad=3, max_iteration=1),
         )
 
-        self.assertEqual(result.dataset_name, "line")
+        np.testing.assert_allclose(result.vertices, dataset.vertices)
         self.assertEqual(len(result.optimized_controls), 1)
         self.assertGreaterEqual(len(result.energy_history), 2)
         self.assertFalse(hasattr(result, "_solver"))
-        self.assertEqual(result.diagnostics["n_segments"], 1)
-        self.assertIn("final_energy", result.diagnostics)
+        self.assertFalse(result.has_constraint)
 
-        with tempfile.TemporaryDirectory() as directory:
-            arrays_path, metadata_path = save_result(
-                result,
-                output_dir=directory,
-                name="test result",
+    def test_solves_sampling_experiments(self):
+        datasets = [
+            TrajectoryDataset(name="line_a", vertices=[[0.0, 0.0], [1.0, 0.0]]),
+            TrajectoryDataset(name="line_b", vertices=[[0.0, 0.0], [2.0, 0.0]]),
+        ]
+        ut, vt = sp.symbols("ut vt")
+
+        def problem_factory(_dataset):
+            return VariationalProblem(
+                name="shortest_path",
+                lagrangian=ut**2 + vt**2,
             )
-            self.assertEqual(arrays_path.name, "test_result.npz")
-            self.assertEqual(metadata_path.name, "test_result.json")
 
-            with np.load(arrays_path) as arrays:
-                np.testing.assert_allclose(arrays["vertices"], dataset.vertices)
-                self.assertIn("optimized_control_000", arrays.files)
+        results = solve_sampling_experiments(
+            datasets,
+            problem_factory,
+            ExperimentConfig(n_bisections=1, n_quad=3, max_iteration=1),
+        )
 
-            metadata = json.loads(Path(metadata_path).read_text())
-            self.assertEqual(metadata["schema_version"], 1)
-            self.assertEqual(metadata["problem_name"], "shortest_path")
-            self.assertEqual(metadata["diagnostics"]["n_segments"], 1)
+        self.assertEqual(len(results), 2)
+        self.assertEqual([len(result.optimized_controls) for result in results], [1, 1])
 
-    def test_global_constraint_target_is_recorded(self):
+    def test_global_constraint_is_tracked(self):
         dataset = TrajectoryDataset(
             name="two_segments",
             vertices=[[0.0, 0.0], [0.5, 0.2], [1.0, 0.0]],
@@ -261,7 +258,7 @@ class ExperimentTests(unittest.TestCase):
             ExperimentConfig(n_bisections=1, n_quad=3, max_iteration=1),
         )
 
-        self.assertEqual(result.problem_metadata["constraint_target"], 2.0)
+        self.assertTrue(result.has_constraint)
         self.assertEqual(len(result.constraint_history), 1)
 
 

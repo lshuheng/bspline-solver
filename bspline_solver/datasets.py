@@ -47,20 +47,15 @@ def _points_array(value: Any, label: str) -> np.ndarray:
 
 def load_dataset(name: str) -> TrajectoryDataset:
     """Load a manually curated dataset bundled with the project."""
-    if name == "kepler_orbit_1":
-        from .data.kepler_orbit_1 import DATASET
+    from .data.basic import DATASETS
 
-        record = DATASET
-    else:
-        from .data.basic import DATASETS
-
-        try:
-            record = DATASETS[name]
-        except KeyError as exc:
-            available = sorted([*DATASETS, "kepler_orbit_1"])
-            raise KeyError(
-                f"unknown dataset {name!r}; available datasets: {available}"
-            ) from exc
+    try:
+        record = DATASETS[name]
+    except KeyError as exc:
+        available = sorted(DATASETS)
+        raise KeyError(
+            f"unknown dataset {name!r}; available datasets: {available}"
+        ) from exc
 
     return TrajectoryDataset(
         name=name,

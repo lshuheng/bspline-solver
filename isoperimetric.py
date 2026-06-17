@@ -21,8 +21,6 @@ def make_isoperimetric_problem(target_length: float) -> VariationalProblem:
         lagrangian=-(u * vt - v * ut) / 2,
         constraint=speed,
         constraint_target=target_length,
-        title="Isoperimetric",
-        metadata={"target_length": target_length},
     )
 
 

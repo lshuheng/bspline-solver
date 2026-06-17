@@ -1,66 +1,51 @@
 """Variational B-spline ODE solver for boundary value problems."""
 
-from .config import (
-    CONSTRAINT_STIFFNESS,
-    DEGREE,
-    REGULARIZATION_STIFFNESS,
-    TANGENT_INIT_SCALE,
-)
+from importlib import import_module
+
 from .datasets import TrajectoryDataset, load_dataset
 from .experiment import (
     ExperimentConfig,
     ExperimentResult,
     VariationalProblem,
-    save_result,
+    solve_sampling_experiments,
     solve_experiment,
 )
-from .lagrangian import Lagrangian2D
 from .ground_truth import FixedMass, ground_truth, ground_truth_kepler
 from .problem_factories import (
     make_double_well_ground_truth_problem,
     make_double_well_problem,
     make_kepler_problem,
 )
-from .regularization import control_variance
-from .solver import EnergyMinimizer2D, pack, unpack
-from .spline import (
-    SplinePath,
-    control_len,
-    initialize_segment,
-    knot_interval,
-    line_init,
-)
-from .visualization import plot_result, plot_sampling_comparison, plot_spline_path
+
+_VISUALIZATION_EXPORTS = {
+    "plot_result",
+    "plot_sampling_comparison",
+    "plot_spline_path",
+}
+
+
+def __getattr__(name: str):
+    if name in _VISUALIZATION_EXPORTS:
+        value = getattr(import_module(".visualization", __name__), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
-    "CONSTRAINT_STIFFNESS",
-    "DEGREE",
-    "EnergyMinimizer2D",
     "ExperimentConfig",
     "ExperimentResult",
     "FixedMass",
-    "Lagrangian2D",
-    "REGULARIZATION_STIFFNESS",
-    "SplinePath",
-    "TANGENT_INIT_SCALE",
     "TrajectoryDataset",
     "VariationalProblem",
-    "control_len",
-    "control_variance",
     "ground_truth",
     "ground_truth_kepler",
-    "initialize_segment",
-    "knot_interval",
-    "line_init",
     "load_dataset",
     "make_double_well_ground_truth_problem",
     "make_double_well_problem",
     "make_kepler_problem",
-    "pack",
     "plot_result",
     "plot_sampling_comparison",
     "plot_spline_path",
-    "save_result",
+    "solve_sampling_experiments",
     "solve_experiment",
-    "unpack",
 ]

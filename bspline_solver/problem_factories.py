@@ -31,12 +31,6 @@ def make_kepler_problem(dataset: TrajectoryDataset) -> VariationalProblem:
         lagrangian=(
             (2 * energy - 2 * potential) ** sp.Rational(1, 2) * speed
         ),
-        title="Kepler orbit 1",
-        metadata={
-            "energy": energy,
-            "gravitational_constant": gravitational_constant,
-            "masses": masses,
-        },
     )
 
 
@@ -53,11 +47,9 @@ def make_double_well_ground_truth_problem(
     return VariationalProblem(
         name="double_well",
         lagrangian=kinetic_energy - potential,
-        title="Double-well potential",
         metadata={
             "epsilon": epsilon_value,
             "omega": omega_value,
-            "potential": str(potential),
         },
     )
 
@@ -65,9 +57,8 @@ def make_double_well_ground_truth_problem(
 def make_double_well_problem(dataset: TrajectoryDataset) -> VariationalProblem:
     """Create the Jacobi-Maupertuis objective for the double-well potential."""
     energy = dataset.metadata["energy"]
-    problem_metadata = dataset.metadata["problem_metadata"]
-    epsilon = problem_metadata["epsilon"]
-    omega = problem_metadata["omega"]
+    epsilon = dataset.metadata["epsilon"]
+    omega = dataset.metadata["omega"]
 
     u, v, ut, vt = sp.symbols("u v ut vt")
     potential = _double_well_potential(u, v, epsilon, omega)
@@ -77,12 +68,6 @@ def make_double_well_problem(dataset: TrajectoryDataset) -> VariationalProblem:
         lagrangian=(
             (2 * energy - 2 * potential) ** sp.Rational(1, 2) * speed
         ),
-        title="Double-well potential",
-        metadata={
-            "energy": energy,
-            "epsilon": epsilon,
-            "omega": omega,
-        },
     )
 
 

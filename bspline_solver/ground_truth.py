@@ -55,22 +55,12 @@ def ground_truth(
         n_dense=n_dense,
         max_position_norm=max_position_norm,
     )
-    trajectory = np.asarray(trajectory, dtype=float)
-    if trajectory.ndim != 2 or trajectory.shape[1] != 2:
-        raise ValueError("IVP solver must return a trajectory with shape (m, 2)")
-    if len(trajectory) < max(vertex_counts):
-        raise ValueError("IVP solver trajectory must contain enough sampled points")
-    if not np.all(np.isfinite(trajectory)):
-        raise ValueError("IVP solver trajectory must contain only finite values")
+    trajectory = _validate_trajectory(trajectory, vertex_counts)
 
     dataset_name = name or f"generated_{problem.name}_trajectory"
     datasets = [
         _build_ground_truth_dataset(
-            name=(
-                dataset_name
-                if len(vertex_counts) == 1
-                else f"{dataset_name}_{vertex_count}_points"
-            ),
+            name=_sampling_dataset_name(dataset_name, vertex_count, vertex_counts),
             problem=problem,
             potential=potential,
             trajectory=trajectory,
@@ -119,21 +109,11 @@ def ground_truth_kepler(
         t_span=t_span,
         n_dense=n_dense,
     )
-    trajectory = np.asarray(trajectory, dtype=float)
-    if trajectory.ndim != 2 or trajectory.shape[1] != 2:
-        raise ValueError("IVP solver must return a trajectory with shape (m, 2)")
-    if len(trajectory) < max(vertex_counts):
-        raise ValueError("IVP solver trajectory must contain enough sampled points")
-    if not np.all(np.isfinite(trajectory)):
-        raise ValueError("IVP solver trajectory must contain only finite values")
+    trajectory = _validate_trajectory(trajectory, vertex_counts)
 
     datasets = [
         _build_kepler_dataset(
-            name=(
-                name
-                if len(vertex_counts) == 1
-                else f"{name}_{vertex_count}_points"
-            ),
+            name=_sampling_dataset_name(name, vertex_count, vertex_counts),
             trajectory=trajectory,
             energy=energy,
             gravitational_constant=float(gravitational_constant),
@@ -182,28 +162,14 @@ def _build_ground_truth_dataset(
         "n_dense": len(trajectory),
         "n_vertices": int(n_vertices),
         "geometric_sampling": bool(geometric_sampling),
-        "problem_metadata": dict(problem.metadata),
     }
-    if geometric_sampling:
-        vertices, sample_indices, sample_arclengths, sample_segment_indices = (
-            _sample_vertices_by_arclength(trajectory, n_vertices)
-        )
-        metadata.update(
-            {
-                "sampling_method": "arclength",
-                "sample_arclengths": sample_arclengths.tolist(),
-                "sample_segment_indices": sample_segment_indices.tolist(),
-            }
-        )
-    else:
-        sample_indices = np.linspace(
-            0,
-            len(trajectory) - 1,
-            n_vertices,
-            dtype=int,
-        )
-        vertices = trajectory[sample_indices]
-        metadata["sampling_method"] = "index"
+    metadata.update(problem.metadata)
+    vertices, sample_indices, sampling_metadata = _sample_trajectory_vertices(
+        trajectory,
+        n_vertices,
+        geometric_sampling,
+    )
+    metadata.update(sampling_metadata)
     metadata["sample_indices"] = sample_indices.tolist()
 
     return TrajectoryDataset(
@@ -240,26 +206,12 @@ def _build_kepler_dataset(
         "n_vertices": int(n_vertices),
         "geometric_sampling": bool(geometric_sampling),
     }
-    if geometric_sampling:
-        vertices, sample_indices, sample_arclengths, sample_segment_indices = (
-            _sample_vertices_by_arclength(trajectory, n_vertices)
-        )
-        metadata.update(
-            {
-                "sampling_method": "arclength",
-                "sample_arclengths": sample_arclengths.tolist(),
-                "sample_segment_indices": sample_segment_indices.tolist(),
-            }
-        )
-    else:
-        sample_indices = np.linspace(
-            0,
-            len(trajectory) - 1,
-            n_vertices,
-            dtype=int,
-        )
-        vertices = trajectory[sample_indices]
-        metadata["sampling_method"] = "index"
+    vertices, sample_indices, sampling_metadata = _sample_trajectory_vertices(
+        trajectory,
+        n_vertices,
+        geometric_sampling,
+    )
+    metadata.update(sampling_metadata)
     metadata["sample_indices"] = sample_indices.tolist()
 
     return TrajectoryDataset(
@@ -297,6 +249,54 @@ def _normalize_vertex_counts(
         if not 2 <= vertex_count <= n_dense:
             raise ValueError("n_vertices values must be between 2 and n_dense")
     return vertex_counts
+
+
+def _validate_trajectory(
+    trajectory: np.ndarray,
+    vertex_counts: Sequence[int],
+) -> np.ndarray:
+    trajectory = np.asarray(trajectory, dtype=float)
+    if trajectory.ndim != 2 or trajectory.shape[1] != 2:
+        raise ValueError("IVP solver must return a trajectory with shape (m, 2)")
+    if len(trajectory) < max(vertex_counts):
+        raise ValueError("IVP solver trajectory must contain enough sampled points")
+    if not np.all(np.isfinite(trajectory)):
+        raise ValueError("IVP solver trajectory must contain only finite values")
+    return trajectory
+
+
+def _sampling_dataset_name(
+    base_name: str,
+    vertex_count: int,
+    vertex_counts: Sequence[int],
+) -> str:
+    if len(vertex_counts) == 1:
+        return base_name
+    return f"{base_name}_{vertex_count}_points"
+
+
+def _sample_trajectory_vertices(
+    trajectory: np.ndarray,
+    n_vertices: int,
+    geometric_sampling: bool,
+) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    if geometric_sampling:
+        vertices, sample_indices, sample_arclengths, sample_segment_indices = (
+            _sample_vertices_by_arclength(trajectory, n_vertices)
+        )
+        return vertices, sample_indices, {
+            "sampling_method": "arclength",
+            "sample_arclengths": sample_arclengths.tolist(),
+            "sample_segment_indices": sample_segment_indices.tolist(),
+        }
+
+    sample_indices = np.linspace(
+        0,
+        len(trajectory) - 1,
+        n_vertices,
+        dtype=int,
+    )
+    return trajectory[sample_indices], sample_indices, {"sampling_method": "index"}
 
 
 def _sample_vertices_by_arclength(

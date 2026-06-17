@@ -53,7 +53,7 @@ def line_init(
     ys = points[:, 1]
 
     noise = rng.normal(0.0, std, len(xs))
-   
+
     noise[0] = 0.0
     noise[-1] = 0.0
     xs = xs - velocity[1] * noise
@@ -123,7 +123,6 @@ class SplinePath:
         self,
         vertex: list,
         theta: list[float] | None = None,
-        n_bisections: int = 2,
         fix_location: list[bool] | None = None,
         fix_angle: list[bool] | None = None,
         cyclic: bool = False,

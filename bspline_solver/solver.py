@@ -62,7 +62,6 @@ class EnergyMinimizer2D:
             self.B,
             self.B_1,
             self.B_2,
-            self.B_3,
         ) = self._compute_quadrature(self.n_quad)
         self.reg = reg
         self.reg_stiffness = REGULARIZATION_STIFFNESS
@@ -85,7 +84,7 @@ class EnergyMinimizer2D:
         quad_pts = np.concatenate(all_t)
         quad_wts = np.concatenate(all_w)
 
-        B, B_1, B_2, B_3 = [], [], [], []
+        B, B_1, B_2 = [], [], []
         n_basis = len(self.knot) - 1 - DEGREE
         for i in range(n_basis):
             coeffs = np.zeros(n_basis)
@@ -94,7 +93,6 @@ class EnergyMinimizer2D:
             B.append(basis(quad_pts))
             B_1.append(basis.derivative(nu=1)(quad_pts))
             B_2.append(basis.derivative(nu=2)(quad_pts))
-            B_3.append(basis.derivative(nu=3)(quad_pts))
 
         return (
             quad_pts,
@@ -102,7 +100,6 @@ class EnergyMinimizer2D:
             np.asarray(B),
             np.asarray(B_1),
             np.asarray(B_2),
-            np.asarray(B_3),
         )
 
     def _evaluate_functional(self, control: np.ndarray, lag: Lagrangian2D):

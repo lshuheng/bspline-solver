@@ -50,9 +50,3 @@ class Lagrangian2D:
         self.Lv_func = sp.lambdify(args, self.Lv, modules="numpy")
         self.Lvt_func = sp.lambdify(args, self.Lvt, modules="numpy")
         self.Lvtt_func = sp.lambdify(args, self.Lvtt, modules="numpy")
-
-    def __getstate__(self):
-        return self.L
-
-    def __setstate__(self, L):
-        self.__init__(L)

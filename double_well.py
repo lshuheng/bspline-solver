@@ -8,7 +8,7 @@ from bspline_solver import (
     make_double_well_ground_truth_problem,
     make_double_well_problem,
     plot_sampling_comparison,
-    solve_experiment,
+    solve_sampling_experiments,
 )
 
 
@@ -33,15 +33,11 @@ def main() -> None:
         n_dense=2000,
         name="generated_double_well_trajectory",
     )
-    results = []
-    for dataset in datasets:
-        problem = make_double_well_problem(dataset)
-        result = solve_experiment(
-            dataset,
-            problem,
-            ExperimentConfig(geometric_init=False),
-        )
-        results.append(result)
+    results = solve_sampling_experiments(
+        datasets,
+        make_double_well_problem,
+        ExperimentConfig(geometric_init=False),
+    )
     plot_sampling_comparison(results)
 
 

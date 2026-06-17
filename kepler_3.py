@@ -6,7 +6,7 @@ from bspline_solver import (
     ground_truth_kepler,
     make_kepler_problem,
     plot_sampling_comparison,
-    solve_experiment,
+    solve_sampling_experiments,
 )
 
 
@@ -31,15 +31,11 @@ def main() -> None:
         n_dense=2000,
         name="generated_kepler_orbit",
     )
-    results = []
-    for dataset in datasets:
-        problem = make_kepler_problem(dataset)
-        result = solve_experiment(
-            dataset,
-            problem,
-            ExperimentConfig(geometric_init=False),
-        )
-        results.append(result)
+    results = solve_sampling_experiments(
+        datasets,
+        make_kepler_problem,
+        ExperimentConfig(geometric_init=False),
+    )
     plot_sampling_comparison(results)
 
 
