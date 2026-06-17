@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from numbers import Integral
 from typing import Any
 
 import numpy as np
@@ -26,15 +27,16 @@ def ground_truth_kepler(
     initial_position: Sequence[float],
     initial_velocity: Sequence[float],
     t_span: tuple[float, float],
-    n_vertices: int,
+    n_vertices: int | Sequence[int],
     n_dense: int = 2000,
     name: str = "generated_kepler_orbit",
-) -> TrajectoryDataset:
-    """Generate a dense Kepler trajectory and evenly subsample its vertices."""
+    geometric_sampling: bool = True,
+) -> TrajectoryDataset | list[TrajectoryDataset]:
+    """Generate a dense Kepler trajectory and subsample interpolation vertices."""
     if n_dense < 2:
         raise ValueError("n_dense must be at least 2")
-    if not 2 <= n_vertices <= n_dense:
-        raise ValueError("n_vertices must be between 2 and n_dense")
+    single_dataset = isinstance(n_vertices, Integral)
+    vertex_counts = _normalize_vertex_counts(n_vertices, n_dense)
 
     position = _vector2(initial_position, "initial_position")
     velocity = _vector2(initial_velocity, "initial_velocity")
@@ -51,38 +53,166 @@ def ground_truth_kepler(
     trajectory = np.asarray(trajectory, dtype=float)
     if trajectory.ndim != 2 or trajectory.shape[1] != 2:
         raise ValueError("IVP solver must return a trajectory with shape (m, 2)")
-    if len(trajectory) < n_vertices:
-        raise ValueError(
-            "IVP solver trajectory must contain at least n_vertices points"
-        )
+    if len(trajectory) < max(vertex_counts):
+        raise ValueError("IVP solver trajectory must contain enough sampled points")
     if not np.all(np.isfinite(trajectory)):
         raise ValueError("IVP solver trajectory must contain only finite values")
 
-    sample_indices = np.linspace(
-        0,
-        len(trajectory) - 1,
-        n_vertices,
-        dtype=int,
-    )
+    datasets = [
+        _build_kepler_dataset(
+            name=(
+                name
+                if len(vertex_counts) == 1
+                else f"{name}_{vertex_count}_points"
+            ),
+            trajectory=trajectory,
+            energy=energy,
+            gravitational_constant=float(gravitational_constant),
+            mass_records=mass_records,
+            initial_position=position,
+            initial_velocity=velocity,
+            t_span=t_span,
+            n_vertices=vertex_count,
+            geometric_sampling=geometric_sampling,
+        )
+        for vertex_count in vertex_counts
+    ]
+    if single_dataset:
+        return datasets[0]
+    return datasets
+
+
+def _build_kepler_dataset(
+    name: str,
+    trajectory: np.ndarray,
+    energy: float,
+    gravitational_constant: float,
+    mass_records: list[dict[str, Any]],
+    initial_position: np.ndarray,
+    initial_velocity: np.ndarray,
+    t_span: tuple[float, float],
+    n_vertices: int,
+    geometric_sampling: bool,
+) -> TrajectoryDataset:
+    metadata: dict[str, Any] = {
+        "description": "Generated Kepler trajectory.",
+        "source": "Kepler IVP solver",
+        "ground_truth_available": True,
+        "energy": float(energy),
+        "gravitational_constant": float(gravitational_constant),
+        "masses": mass_records,
+        "initial_position": initial_position.tolist(),
+        "initial_velocity": initial_velocity.tolist(),
+        "t_span": [float(t_span[0]), float(t_span[1])],
+        "n_dense": len(trajectory),
+        "n_vertices": int(n_vertices),
+        "geometric_sampling": bool(geometric_sampling),
+    }
+    if geometric_sampling:
+        vertices, sample_indices, sample_arclengths, sample_segment_indices = (
+            _sample_vertices_by_arclength(trajectory, n_vertices)
+        )
+        metadata.update(
+            {
+                "sampling_method": "arclength",
+                "sample_arclengths": sample_arclengths.tolist(),
+                "sample_segment_indices": sample_segment_indices.tolist(),
+            }
+        )
+    else:
+        sample_indices = np.linspace(
+            0,
+            len(trajectory) - 1,
+            n_vertices,
+            dtype=int,
+        )
+        vertices = trajectory[sample_indices]
+        metadata["sampling_method"] = "index"
+    metadata["sample_indices"] = sample_indices.tolist()
 
     return TrajectoryDataset(
         name=name,
         trajectory=trajectory,
-        vertices=trajectory[sample_indices],
-        metadata={
-            "description": "Generated Kepler trajectory.",
-            "source": "Kepler IVP solver",
-            "ground_truth_available": True,
-            "energy": float(energy),
-            "gravitational_constant": float(gravitational_constant),
-            "masses": mass_records,
-            "initial_position": position.tolist(),
-            "initial_velocity": velocity.tolist(),
-            "t_span": [float(t_span[0]), float(t_span[1])],
-            "n_dense": len(trajectory),
-            "sample_indices": sample_indices.tolist(),
-        },
+        vertices=vertices,
+        metadata=metadata,
     )
+
+
+def _normalize_vertex_counts(
+    n_vertices: int | Sequence[int],
+    n_dense: int,
+) -> list[int]:
+    if isinstance(n_vertices, Integral) and not isinstance(n_vertices, bool):
+        vertex_counts = [int(n_vertices)]
+    else:
+        if isinstance(n_vertices, str | bytes):
+            raise ValueError("n_vertices must be an integer or a sequence of integers")
+        vertex_counts = []
+        try:
+            counts = list(n_vertices)
+        except TypeError as exc:
+            raise ValueError(
+                "n_vertices must be an integer or a sequence of integers"
+            ) from exc
+        for count in counts:
+            if not isinstance(count, Integral) or isinstance(count, bool):
+                raise ValueError("n_vertices values must be integers")
+            vertex_counts.append(int(count))
+        if not vertex_counts:
+            raise ValueError("n_vertices must contain at least one sampling level")
+
+    for vertex_count in vertex_counts:
+        if not 2 <= vertex_count <= n_dense:
+            raise ValueError("n_vertices values must be between 2 and n_dense")
+    return vertex_counts
+
+
+def _sample_vertices_by_arclength(
+    trajectory: np.ndarray,
+    n_vertices: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    segment_lengths = np.linalg.norm(np.diff(trajectory, axis=0), axis=1)
+    cumulative_lengths = np.concatenate([[0.0], np.cumsum(segment_lengths)])
+    total_length = cumulative_lengths[-1]
+    if not np.isfinite(total_length) or total_length <= 0.0:
+        raise ValueError("trajectory must have positive arclength")
+
+    sample_arclengths = np.linspace(0.0, total_length, n_vertices)
+    sample_segment_indices = np.searchsorted(
+        cumulative_lengths,
+        sample_arclengths,
+        side="right",
+    ) - 1
+    sample_segment_indices = np.clip(
+        sample_segment_indices,
+        0,
+        len(segment_lengths) - 1,
+    )
+
+    starts = cumulative_lengths[sample_segment_indices]
+    lengths = segment_lengths[sample_segment_indices]
+    weights = np.divide(
+        sample_arclengths - starts,
+        lengths,
+        out=np.zeros_like(sample_arclengths),
+        where=lengths > 0.0,
+    )
+    vertices = (
+        (1.0 - weights[:, None]) * trajectory[sample_segment_indices]
+        + weights[:, None] * trajectory[sample_segment_indices + 1]
+    )
+    vertices[0] = trajectory[0]
+    vertices[-1] = trajectory[-1]
+
+    sample_indices = np.searchsorted(
+        cumulative_lengths,
+        sample_arclengths,
+        side="left",
+    )
+    sample_indices = np.clip(sample_indices, 0, len(trajectory) - 1)
+    sample_indices[0] = 0
+    sample_indices[-1] = len(trajectory) - 1
+    return vertices, sample_indices, sample_arclengths, sample_segment_indices
 
 
 def _solve_kepler_ivp(

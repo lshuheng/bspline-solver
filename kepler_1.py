@@ -9,7 +9,7 @@ from bspline_solver import (
     TrajectoryDataset,
     VariationalProblem,
     ground_truth_kepler,
-    plot_result,
+    plot_sampling_comparison,
     solve_experiment,
 )
 
@@ -47,26 +47,32 @@ def make_kepler_problem(dataset: TrajectoryDataset) -> VariationalProblem:
 
 
 def main() -> None:
-    dataset = ground_truth_kepler(
+    datasets = ground_truth_kepler(
         masses=[
-            FixedMass(center=np.array([-1.2, 0.0]), mass=1.0),
-            FixedMass(center=np.array([1.2, 0.0]), mass=1.0),
+            FixedMass(center=np.array([-1.1, -0.6]), mass=0.7),
+            FixedMass(center=np.array([1.1, -0.5]), mass=0.85),
+            FixedMass(center=np.array([0.0, 1.05]), mass=0.55),
+
         ],
+
         gravitational_constant=1.0,
-        initial_position=[0.0, 4.0],
-        initial_velocity=[-0.6, 0.0],
-        t_span=(0.0, 30.0),
-        n_vertices=5,
+        initial_position=[3.37, 0.15],
+        initial_velocity=[-0.12, 0.78],
+        t_span=(0.0, 40.0),
+        n_vertices=[10, 15],
         n_dense=2000,
         name="generated_kepler_orbit",
     )
-    problem = make_kepler_problem(dataset)
-    result = solve_experiment(
-        dataset,
-        problem,
-        ExperimentConfig(geometric_init=False),
-    )
-    plot_result(result)
+    results = []
+    for dataset in datasets:
+        problem = make_kepler_problem(dataset)
+        result = solve_experiment(
+            dataset,
+            problem,
+            ExperimentConfig(geometric_init=False),
+        )
+        results.append(result)
+    plot_sampling_comparison(results)
 
 
 if __name__ == "__main__":

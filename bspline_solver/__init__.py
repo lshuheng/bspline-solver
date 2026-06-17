@@ -25,7 +25,7 @@ from .spline import (
     knot_interval,
     line_init,
 )
-from .visualization import plot_result, plot_spline_path
+from .visualization import plot_result, plot_sampling_comparison, plot_spline_path
 
 __all__ = [
     "CONSTRAINT_STIFFNESS",
@@ -49,6 +49,7 @@ __all__ = [
     "load_dataset",
     "pack",
     "plot_result",
+    "plot_sampling_comparison",
     "plot_spline_path",
     "save_result",
     "solve_experiment",

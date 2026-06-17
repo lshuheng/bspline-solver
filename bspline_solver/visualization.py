@@ -185,9 +185,52 @@ def plot_result(result: "ExperimentResult", diagnostic_mode = False, show: bool 
             axes[5].set_xlabel("Outer iteration")
             axes[5].set_ylabel("lambda")
 
-    fig.suptitle(f"{len(result.vertices)} interpolation points")
+    fig.suptitle(f"Points sampled = {len(result.vertices)}")
     _add_shared_path_legend(fig, axes[:n_path_plots])
     fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.94))
+    if show:
+        plt.show()
+    return fig, axes
+
+
+def plot_sampling_comparison(
+    results: list["ExperimentResult"],
+    show: bool = True,
+    figsize: tuple[float, float] | None = None,
+):
+    """Plot the three interpolation views for each sampling level together."""
+    if not results:
+        raise ValueError("results must contain at least one ExperimentResult")
+
+    if figsize is None:
+        figsize = (12.0, max(3.2, 2.8 * len(results)))
+    fig, axes = plt.subplots(len(results), 3, figsize=figsize)
+    axes = np.atleast_2d(axes)
+
+    column_titles = [
+        "Linear Interpolation",
+        "SciPy spline interpolation",
+        "Physics-based interpolation",
+    ]
+    for row_index, (row, result) in enumerate(zip(axes, results)):
+        plot_spline_path(result.initial_controls, result.knot, ax=row[0])
+        _plot_reference_data(result, row[0])
+
+        plot_scipy_spline_path(result.vertices, ax=row[1])
+        _plot_reference_data(result, row[1])
+
+        plot_spline_path(result.optimized_controls, result.knot, ax=row[2])
+        _plot_reference_data(result, row[2])
+
+        if row_index == 0:
+            for ax, title in zip(row, column_titles):
+                ax.set_title(title, fontsize=10)
+        row[0].set_ylabel(f"Points = {len(result.vertices)}", fontsize=9)
+        for ax in row:
+            ax.tick_params(labelsize=8)
+
+    _add_shared_path_legend(fig, axes.ravel())
+    fig.tight_layout(rect=(0.0, 0.08, 1.0, 1.0), h_pad=1.0, w_pad=0.5)
     if show:
         plt.show()
     return fig, axes
@@ -203,7 +246,7 @@ def _plot_reference_data(result: "ExperimentResult", ax) -> None:
             "--",
             color="tab:blue",
             linewidth=1.0,
-            label="Dense trajectory",
+            label="True trajectory",
         )
         reference_points.append(trajectory)
     ax.scatter(
@@ -223,7 +266,7 @@ def _plot_reference_data(result: "ExperimentResult", ax) -> None:
         s=80,
         linewidths=1.8,
         zorder=5,
-        label="First interpolation point",
+        label="Start",
     )
     ax.scatter(
         result.vertices[-1, 0],
@@ -233,7 +276,7 @@ def _plot_reference_data(result: "ExperimentResult", ax) -> None:
         s=80,
         linewidths=1.8,
         zorder=5,
-        label="Last interpolation point",
+        label="End",
     )
 
     points = np.concatenate(reference_points)
@@ -263,11 +306,12 @@ def _add_shared_path_legend(fig, axes) -> None:
         return
 
     ordered_labels = [
-        "Dense trajectory",
-        "Interpolation points",
-        "First interpolation point",
-        "Last interpolation point",
+        "True trajectory",
         "Interpolated trajectory",
+        "Interpolation points",
+        "Start",
+        "End",
+        
     ]
     labels = [label for label in ordered_labels if label in handles_by_label]
     handles = [handles_by_label[label] for label in labels]
