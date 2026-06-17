@@ -1,62 +1,33 @@
 """Demo: reconstruct a generated two-center Kepler trajectory."""
 
-import numpy as np
-import sympy as sp
-
 from bspline_solver import (
     ExperimentConfig,
     FixedMass,
-    TrajectoryDataset,
-    VariationalProblem,
     ground_truth_kepler,
+    make_kepler_problem,
     plot_sampling_comparison,
     solve_experiment,
 )
 
 
-def make_kepler_problem(dataset: TrajectoryDataset) -> VariationalProblem:
-    """Create the Jacobi-Maupertuis objective for fixed point masses."""
-    energy = dataset.metadata["energy"]
-    masses = dataset.metadata["masses"]
-    gravitational_constant = dataset.metadata["gravitational_constant"]
-
-    u, v, ut, vt = sp.symbols("u v ut vt")
-    potential = sum(
-        -gravitational_constant
-        * fixed_mass["mass"]
-        / (
-            (u - fixed_mass["center"][0]) ** 2
-            + (v - fixed_mass["center"][1]) ** 2
-        )
-        ** sp.Rational(1, 2)
-        for fixed_mass in masses
-    )
-    speed = (ut**2 + vt**2) ** sp.Rational(1, 2)
-    return VariationalProblem(
-        name="kepler",
-        lagrangian=(
-            (2 * energy - 2 * potential) ** sp.Rational(1, 2) * speed
-        ),
-        title="Kepler orbit 1",
-        metadata={
-            "energy": energy,
-            "gravitational_constant": gravitational_constant,
-            "masses": masses,
-        },
-    )
-
-
 def main() -> None:
+    masses = [
+        FixedMass(center=[-1.1, 0.0], mass=1.0),
+        FixedMass(center=[1.1, 0.0], mass=0.65),
+    ]
+    gravitational_constant = 1.0
+    initial_position = [0, 2.8]
+    initial_velocity = [0.72, 0.4]
+    t_span = (0.0, 80)
+    n_vertices = [10, 15]
+
     datasets = ground_truth_kepler(
-        masses=[
-            FixedMass(center=np.array([-1.1, 0.0]), mass=1.0),
-            FixedMass(center=np.array([1.1, 0.0]), mass=0.65),
-        ],
-        gravitational_constant=1.0,
-        initial_position=[0, 2.8],
-        initial_velocity=[0.72, 0.4],
-        t_span=(0.0, 80),
-        n_vertices=[10, 15],
+        masses=masses,
+        gravitational_constant=gravitational_constant,
+        initial_position=initial_position,
+        initial_velocity=initial_velocity,
+        t_span=t_span,
+        n_vertices=n_vertices,
         n_dense=2000,
         name="generated_kepler_orbit",
     )

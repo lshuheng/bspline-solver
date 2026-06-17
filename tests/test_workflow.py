@@ -11,6 +11,7 @@ from bspline_solver import (
     ExperimentConfig,
     TrajectoryDataset,
     VariationalProblem,
+    ground_truth,
     ground_truth_kepler,
     load_dataset,
     save_result,
@@ -146,6 +147,53 @@ class DatasetTests(unittest.TestCase):
             dataset.metadata["sample_arclengths"],
             [0.0, 5.5, 11.0],
         )
+
+    def test_variational_ground_truth_generates_harmonic_orbit(self):
+        u, v, ut, vt = sp.symbols("u v ut vt")
+        potential = sp.Rational(1, 2) * (u**2 + v**2)
+        problem = VariationalProblem(
+            name="harmonic_oscillator",
+            lagrangian=sp.Rational(1, 2) * (ut**2 + vt**2) - potential,
+        )
+
+        dataset = ground_truth(
+            problem=problem,
+            initial_position=[1.0, 0.0],
+            initial_velocity=[0.0, 1.0],
+            t_span=(0.0, 2.0 * np.pi),
+            n_vertices=5,
+            n_dense=33,
+        )
+
+        self.assertEqual(dataset.name, "generated_harmonic_oscillator_trajectory")
+        self.assertEqual(dataset.trajectory.shape, (33, 2))
+        self.assertEqual(dataset.vertices.shape, (5, 2))
+        self.assertAlmostEqual(dataset.metadata["energy"], 1.0)
+        self.assertEqual(dataset.metadata["problem_name"], "harmonic_oscillator")
+        np.testing.assert_allclose(dataset.trajectory[0], [1.0, 0.0])
+        np.testing.assert_allclose(dataset.trajectory[-1], [1.0, 0.0], atol=1e-8)
+
+    def test_variational_ground_truth_can_stop_at_position_limit(self):
+        u = sp.symbols("u")
+        problem = VariationalProblem(
+            name="repelling_potential",
+            lagrangian=-sp.Rational(1, 2) * u**2,
+        )
+
+        dataset = ground_truth(
+            problem=problem,
+            initial_position=[1.0, 0.0],
+            initial_velocity=[0.0, 0.0],
+            t_span=(0.0, 5.0),
+            n_vertices=3,
+            n_dense=51,
+            max_position_norm=2.0,
+        )
+
+        self.assertEqual(dataset.metadata["termination"]["reason"], "max_position_norm")
+        self.assertLess(dataset.metadata["actual_t_span"][1], 5.0)
+        self.assertEqual(dataset.metadata["t_span"], [0.0, 5.0])
+        self.assertGreaterEqual(len(dataset.trajectory), 3)
 
 
 class ExperimentTests(unittest.TestCase):
