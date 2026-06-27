@@ -50,7 +50,6 @@ For a symbolic Lagrangian \(L(t, u, u', u'', v, v', v'')\), the optimized curve 
 
 \[
 \sum_{\text{segments}} \int_0^1 L(t, u, u', u'', v, v', v'')\,dt
-    + \lambda R(c),
 \]
 
 optionally subject to an integral constraint

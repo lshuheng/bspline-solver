@@ -8,9 +8,6 @@ DEGREE = 3
 # Penalty stiffness for the integral constraint in the augmented Lagrangian.
 CONSTRAINT_STIFFNESS = 10.0
 
-# Stiffness for the control-point regularization term.
-REGULARIZATION_STIFFNESS = 10.0
-
 # Scaling factor used when seeding boundary tangents during initialization.
 TANGENT_INIT_SCALE = 1.0
 

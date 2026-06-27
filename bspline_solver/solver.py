@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Optional
 
 import numpy as np
 import sympy as sp
@@ -10,9 +10,8 @@ from scipy.interpolate import BSpline
 from scipy.optimize import minimize
 from scipy.special import roots_legendre
 
-from .config import CONSTRAINT_STIFFNESS, DEGREE, REGULARIZATION_STIFFNESS
+from .config import CONSTRAINT_STIFFNESS, DEGREE
 from .lagrangian import Lagrangian2D
-from .regularization import control_variance
 from .spline import SplinePath
 
 
@@ -32,7 +31,7 @@ class EnergyMinimizer2D:
 
     Given a SplinePath skeleton, control-point initialization, a knot vector,
     a Lagrangian, and an optional integral constraint, this class minimizes
-        ∫ L(t, u, u', u'', v, v', v'') dt + reg(c)
+        ∫ L(t, u, u', u'', v, v', v'') dt
     subject to
         ∫ G(t, u, u', u'', v, v', v'') dt = 0
     using L-BFGS-B inner loops and an augmented-Lagrangian outer loop.
@@ -45,7 +44,6 @@ class EnergyMinimizer2D:
         init_knot: np.ndarray,
         lagrangian: sp.Expr,
         constraint: Optional[sp.Expr] = None,
-        reg: Optional[Callable] = control_variance,
         n_quad: int = 5,
     ) -> None:
         self.spline = skeleton
@@ -63,8 +61,6 @@ class EnergyMinimizer2D:
             self.B_1,
             self.B_2,
         ) = self._compute_quadrature(self.n_quad)
-        self.reg = reg
-        self.reg_stiffness = REGULARIZATION_STIFFNESS
 
     def _compute_quadrature(self, n_quad: int):
         """Precompute Gauss-Legendre quadrature nodes/weights and basis evaluations."""
@@ -176,11 +172,6 @@ class EnergyMinimizer2D:
                             self.constraint_multiplier
                             + self.constraint_stiffness * g_acc
                         ) * dg[e]
-                    if self.reg is not None:
-                        energy_reg, gradient_reg = self.reg(control_dict[e])
-                        energy[e] += self.reg_stiffness * energy_reg
-                        gradient[e] += self.reg_stiffness * gradient_reg
-
                 self.spline.grad_mask(gradient)
                 return sum(energy.values()), unpack(gradient)
 

@@ -9,11 +9,8 @@ import numpy as np
 import sympy as sp
 
 from .datasets import TrajectoryDataset
-from .regularization import control_variance
 from .solver import EnergyMinimizer2D
 from .spline import SplinePath
-
-Regularizer = Callable[[np.ndarray], tuple[float, np.ndarray]]
 
 
 @dataclass(frozen=True)
@@ -24,7 +21,6 @@ class VariationalProblem:
     lagrangian: sp.Expr
     constraint: Optional[sp.Expr] = None
     constraint_target: float = 0.0
-    regularization: Optional[Regularizer] = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -89,7 +85,6 @@ def solve_experiment(
             control,
             knot,
             utt**2 + vtt**2,
-            reg=control_variance,
             n_quad=config.n_quad,
         )
         geometric_solver.minimize(max_iteration=config.max_iteration)
@@ -108,7 +103,6 @@ def solve_experiment(
             if problem.constraint is None
             else problem.constraint - problem.constraint_target / len(path.edges)
         ),
-        reg=problem.regularization,
         n_quad=config.n_quad,
     )
     solver.minimize(
