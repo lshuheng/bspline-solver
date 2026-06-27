@@ -3,7 +3,8 @@
 from bspline_solver import (
     ExperimentConfig,
     FixedMass,
-    ground_truth_kepler,
+    ground_truth,
+    make_kepler_ground_truth_problem,
     make_kepler_problem,
     plot_sampling_comparison,
     solve_sampling_experiments,
@@ -21,9 +22,12 @@ def main() -> None:
     t_span = (0.0, 80)
     n_vertices = [10, 15]
 
-    datasets = ground_truth_kepler(
+    ground_truth_problem = make_kepler_ground_truth_problem(
         masses=masses,
         gravitational_constant=gravitational_constant,
+    )
+    datasets = ground_truth(
+        problem=ground_truth_problem,
         initial_position=initial_position,
         initial_velocity=initial_velocity,
         t_span=t_span,

@@ -23,6 +23,39 @@ class FixedMass:
     mass: float
 
 
+def make_kepler_ground_truth_problem(
+    masses: Sequence[Mapping[str, Any] | FixedMass],
+    gravitational_constant: float,
+    name: str = "kepler",
+) -> VariationalProblem:
+    """Create the mechanical Kepler problem used by the shared IVP pipeline."""
+    mass_records = _normalize_masses(masses)
+    gravitational_constant = float(gravitational_constant)
+    if not np.isfinite(gravitational_constant) or gravitational_constant <= 0:
+        raise ValueError("gravitational_constant must be a positive finite value")
+
+    u, v, ut, vt = sp.symbols("u v ut vt")
+    potential = sum(
+        -gravitational_constant
+        * fixed_mass["mass"]
+        / (
+            (u - fixed_mass["center"][0]) ** 2
+            + (v - fixed_mass["center"][1]) ** 2
+        )
+        ** sp.Rational(1, 2)
+        for fixed_mass in mass_records
+    )
+    kinetic_energy = sp.Rational(1, 2) * (ut**2 + vt**2)
+    return VariationalProblem(
+        name=name,
+        lagrangian=kinetic_energy - potential,
+        metadata={
+            "gravitational_constant": gravitational_constant,
+            "masses": mass_records,
+        },
+    )
+
+
 def ground_truth(
     problem: VariationalProblem,
     initial_position: Sequence[float],
@@ -91,44 +124,21 @@ def ground_truth_kepler(
     name: str = "generated_kepler_orbit",
     geometric_sampling: bool = True,
 ) -> TrajectoryDataset | list[TrajectoryDataset]:
-    """Generate a dense Kepler trajectory and subsample interpolation vertices."""
-    if n_dense < 2:
-        raise ValueError("n_dense must be at least 2")
-    single_dataset = isinstance(n_vertices, Integral)
-    vertex_counts = _normalize_vertex_counts(n_vertices, n_dense)
-
-    position = _vector2(initial_position, "initial_position")
-    velocity = _vector2(initial_velocity, "initial_velocity")
-    mass_records = _normalize_masses(masses)
-
-    trajectory, energy = _solve_kepler_ivp(
-        masses=mass_records,
-        gravitational_constant=float(gravitational_constant),
-        initial_position=position,
-        initial_velocity=velocity,
-        t_span=t_span,
-        n_dense=n_dense,
+    """Generate a Kepler trajectory through the shared ground_truth pipeline."""
+    problem = make_kepler_ground_truth_problem(
+        masses=masses,
+        gravitational_constant=gravitational_constant,
     )
-    trajectory = _validate_trajectory(trajectory, vertex_counts)
-
-    datasets = [
-        _build_kepler_dataset(
-            name=_sampling_dataset_name(name, vertex_count, vertex_counts),
-            trajectory=trajectory,
-            energy=energy,
-            gravitational_constant=float(gravitational_constant),
-            mass_records=mass_records,
-            initial_position=position,
-            initial_velocity=velocity,
-            t_span=t_span,
-            n_vertices=vertex_count,
-            geometric_sampling=geometric_sampling,
-        )
-        for vertex_count in vertex_counts
-    ]
-    if single_dataset:
-        return datasets[0]
-    return datasets
+    return ground_truth(
+        problem=problem,
+        initial_position=initial_position,
+        initial_velocity=initial_velocity,
+        t_span=t_span,
+        n_vertices=n_vertices,
+        n_dense=n_dense,
+        name=name,
+        geometric_sampling=geometric_sampling,
+    )
 
 
 def _build_ground_truth_dataset(
@@ -164,48 +174,6 @@ def _build_ground_truth_dataset(
         "geometric_sampling": bool(geometric_sampling),
     }
     metadata.update(problem.metadata)
-    vertices, sample_indices, sampling_metadata = _sample_trajectory_vertices(
-        trajectory,
-        n_vertices,
-        geometric_sampling,
-    )
-    metadata.update(sampling_metadata)
-    metadata["sample_indices"] = sample_indices.tolist()
-
-    return TrajectoryDataset(
-        name=name,
-        trajectory=trajectory,
-        vertices=vertices,
-        metadata=metadata,
-    )
-
-
-def _build_kepler_dataset(
-    name: str,
-    trajectory: np.ndarray,
-    energy: float,
-    gravitational_constant: float,
-    mass_records: list[dict[str, Any]],
-    initial_position: np.ndarray,
-    initial_velocity: np.ndarray,
-    t_span: tuple[float, float],
-    n_vertices: int,
-    geometric_sampling: bool,
-) -> TrajectoryDataset:
-    metadata: dict[str, Any] = {
-        "description": "Generated Kepler trajectory.",
-        "source": "Kepler IVP solver",
-        "ground_truth_available": True,
-        "energy": float(energy),
-        "gravitational_constant": float(gravitational_constant),
-        "masses": mass_records,
-        "initial_position": initial_position.tolist(),
-        "initial_velocity": initial_velocity.tolist(),
-        "t_span": [float(t_span[0]), float(t_span[1])],
-        "n_dense": len(trajectory),
-        "n_vertices": int(n_vertices),
-        "geometric_sampling": bool(geometric_sampling),
-    }
     vertices, sample_indices, sampling_metadata = _sample_trajectory_vertices(
         trajectory,
         n_vertices,
@@ -280,12 +248,15 @@ def _sample_trajectory_vertices(
     n_vertices: int,
     geometric_sampling: bool,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
+    arclength_data = _trajectory_arclength_data(trajectory)
+    _, _, total_arclength = arclength_data
     if geometric_sampling:
         vertices, sample_indices, sample_arclengths, sample_segment_indices = (
-            _sample_vertices_by_arclength(trajectory, n_vertices)
+            _sample_vertices_by_arclength(trajectory, n_vertices, arclength_data)
         )
         return vertices, sample_indices, {
             "sampling_method": "arclength",
+            "total_arclength": float(total_arclength),
             "sample_arclengths": sample_arclengths.tolist(),
             "sample_segment_indices": sample_segment_indices.tolist(),
         }
@@ -296,17 +267,32 @@ def _sample_trajectory_vertices(
         n_vertices,
         dtype=int,
     )
-    return trajectory[sample_indices], sample_indices, {"sampling_method": "index"}
+    return trajectory[sample_indices], sample_indices, {
+        "sampling_method": "index",
+        "total_arclength": float(total_arclength),
+    }
+
+
+def _trajectory_arclength_data(
+    trajectory: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    segment_lengths = np.linalg.norm(np.diff(trajectory, axis=0), axis=1)
+    cumulative_lengths = np.concatenate([[0.0], np.cumsum(segment_lengths)])
+    total_length = float(cumulative_lengths[-1])
+    if not np.isfinite(total_length):
+        raise ValueError("trajectory arclength must be finite")
+    return segment_lengths, cumulative_lengths, total_length
 
 
 def _sample_vertices_by_arclength(
     trajectory: np.ndarray,
     n_vertices: int,
+    arclength_data: tuple[np.ndarray, np.ndarray, float] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    segment_lengths = np.linalg.norm(np.diff(trajectory, axis=0), axis=1)
-    cumulative_lengths = np.concatenate([[0.0], np.cumsum(segment_lengths)])
-    total_length = cumulative_lengths[-1]
-    if not np.isfinite(total_length) or total_length <= 0.0:
+    if arclength_data is None:
+        arclength_data = _trajectory_arclength_data(trajectory)
+    segment_lengths, cumulative_lengths, total_length = arclength_data
+    if total_length <= 0.0:
         raise ValueError("trajectory must have positive arclength")
 
     sample_arclengths = np.linspace(0.0, total_length, n_vertices)
@@ -468,87 +454,6 @@ def _potential_from_problem(problem: VariationalProblem) -> sp.Expr:
         "ground_truth supports mechanical Lagrangians of the form "
         "0.5 * (ut**2 + vt**2) - V(u, v), or direct potentials V(u, v)"
     )
-
-
-def _solve_kepler_ivp(
-    masses: Sequence[Mapping[str, Any] | FixedMass],
-    gravitational_constant: float,
-    initial_position: np.ndarray,
-    initial_velocity: np.ndarray,
-    t_span: tuple[float, float],
-    n_dense: int,
-) -> tuple[np.ndarray, float]:
-    """Return a dense position trajectory and its conserved energy."""
-    if n_dense < 2:
-        raise ValueError("n_dense must be at least 2")
-    t0, t1 = float(t_span[0]), float(t_span[1])
-    if not np.isfinite([t0, t1]).all() or t1 <= t0:
-        raise ValueError("t_span must contain two finite increasing values")
-
-    mass_records = _normalize_masses(masses)
-    centers = np.asarray([record["center"] for record in mass_records], dtype=float)
-    mass_values = np.asarray([record["mass"] for record in mass_records], dtype=float)
-    gravitational_constant = float(gravitational_constant)
-    if not np.isfinite(gravitational_constant) or gravitational_constant <= 0:
-        raise ValueError("gravitational_constant must be a positive finite value")
-
-    position = _vector2(initial_position, "initial_position")
-    velocity = _vector2(initial_velocity, "initial_velocity")
-    energy = 0.5 * float(np.dot(velocity, velocity)) + _kepler_potential(
-        position,
-        centers,
-        mass_values,
-        gravitational_constant,
-    )
-    initial_state = np.concatenate([position, velocity])
-    t_eval = np.linspace(t0, t1, int(n_dense))
-
-    def rhs(_time: float, state: np.ndarray) -> np.ndarray:
-        point = state[:2]
-        speed = state[2:]
-        displacement = point - centers
-        distances = np.linalg.norm(displacement, axis=1)
-        if np.any(distances == 0.0):
-            raise ValueError("trajectory intersects a fixed mass center")
-        acceleration = (
-            -gravitational_constant
-            * np.sum(
-                mass_values[:, None]
-                * displacement
-                / distances[:, None] ** 3,
-                axis=0,
-            )
-        )
-        return np.concatenate([speed, acceleration])
-
-    solution = solve_ivp(
-        rhs,
-        (t0, t1),
-        initial_state,
-        method="DOP853",
-        t_eval=t_eval,
-        rtol=1e-10,
-        atol=1e-12,
-    )
-    if not solution.success:
-        raise RuntimeError(f"Kepler IVP integration failed: {solution.message}")
-    if solution.y.shape != (4, n_dense):
-        raise RuntimeError("Kepler IVP integration returned an unexpected shape")
-
-    return solution.y[:2].T, energy
-
-
-def _kepler_potential(
-    position: np.ndarray,
-    centers: np.ndarray,
-    masses: np.ndarray,
-    gravitational_constant: float,
-) -> float:
-    displacement = position - centers
-    distances = np.linalg.norm(displacement, axis=1)
-    if np.any(distances == 0.0):
-        raise ValueError("initial_position must not coincide with a fixed mass center")
-    return -gravitational_constant * float(np.sum(masses / distances))
 
 
 def _vector2(value: Sequence[float], label: str) -> np.ndarray:

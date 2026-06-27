@@ -61,6 +61,8 @@ class ExperimentResult:
     constraint_history: np.ndarray
     multiplier_history: np.ndarray
     has_constraint: bool
+    constraint_target: Optional[float] = None
+    cyclic: bool = False
 
 
 def solve_experiment(
@@ -128,6 +130,12 @@ def solve_experiment(
         constraint_history=np.asarray(solver.constraint_history, dtype=float),
         multiplier_history=np.asarray(solver.multiplier_history, dtype=float),
         has_constraint=problem.constraint is not None,
+        constraint_target=(
+            float(problem.constraint_target)
+            if problem.constraint is not None
+            else None
+        ),
+        cyclic=bool(config.cyclic),
     )
 
 

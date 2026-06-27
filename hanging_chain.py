@@ -4,8 +4,8 @@ import sympy as sp
 
 from bspline_solver import (
     ExperimentConfig,
+    TrajectoryDataset,
     VariationalProblem,
-    load_dataset,
     plot_result,
     solve_experiment,
 )
@@ -23,12 +23,19 @@ def make_hanging_chain_problem(target_length: float) -> VariationalProblem:
 
 
 def main() -> None:
-    dataset = load_dataset("hanging_chain")
-    problem = make_hanging_chain_problem(target_length=3.0)
+    dataset = TrajectoryDataset(
+        name="hanging_chain",
+        vertices=[
+            [0.0, 0.0],
+            [0.5, 1.0],
+            [2.0, 2.0],
+        ],
+    )
+    problem = make_hanging_chain_problem(target_length=5.0)
     result = solve_experiment(
         dataset,
         problem,
-        ExperimentConfig(fix_location=[True, False, True]),
+        ExperimentConfig(fix_location=[True, True, True]),
     )
     plot_result(result)
 

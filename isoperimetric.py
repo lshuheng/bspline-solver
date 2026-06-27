@@ -6,8 +6,8 @@ import sympy as sp
 
 from bspline_solver import (
     ExperimentConfig,
+    TrajectoryDataset,
     VariationalProblem,
-    load_dataset,
     plot_result,
     solve_experiment,
 )
@@ -25,13 +25,21 @@ def make_isoperimetric_problem(target_length: float) -> VariationalProblem:
 
 
 def main() -> None:
-    dataset = load_dataset("isoperimetric")
+    dataset = TrajectoryDataset(
+        name="isoperimetric",
+        vertices=[
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [-1.0, 0.0],
+
+        ],
+    )
     problem = make_isoperimetric_problem(target_length=2.0 * math.pi)
     result = solve_experiment(
         dataset,
         problem,
         ExperimentConfig(
-            fix_location=[False, False, False, False],
+            fix_location=[True, True, True],
             cyclic=True,
         ),
     )

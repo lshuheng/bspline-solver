@@ -84,16 +84,49 @@ def plot_spline_path(
     return ax
 
 
+def plot_linear_path(vertices: np.ndarray, ax=None, cyclic: bool = False):
+    """Plot the piecewise-linear path through interpolation vertices."""
+    if ax is None:
+        _, ax = plt.subplots()
+
+    points = np.asarray(vertices, dtype=float)
+    if points.ndim != 2 or points.shape[1] != 2 or len(points) < 2:
+        raise ValueError("vertices must have shape (n, 2) with n >= 2")
+    if cyclic and not np.allclose(points[0], points[-1]):
+        points = np.vstack([points, points[0]])
+
+    ax.plot(
+        points[:, 0],
+        points[:, 1],
+        color="tab:orange",
+        label="Interpolated trajectory",
+    )
+    x_min, y_min = points.min(axis=0)
+    x_max, y_max = points.max(axis=0)
+    pad_x = (x_max - x_min) * 0.05 if x_max > x_min else 1.0
+    pad_y = (y_max - y_min) * 0.05 if y_max > y_min else 1.0
+    ax.set_xlim(x_min - pad_x, x_max + pad_x)
+    ax.set_ylim(y_min - pad_y, y_max + pad_y)
+    ax.set_aspect("equal")
+    return ax
+
+
 def plot_scipy_spline_path(
     vertices: np.ndarray,
     resolution: int = 2000,
     ax=None,
+    cyclic: bool = False,
 ):
     """Plot SciPy's parametric interpolating spline through the vertices."""
     if ax is None:
         _, ax = plt.subplots()
 
     points = np.asarray(vertices, dtype=float)
+    if points.ndim != 2 or points.shape[1] != 2:
+        raise ValueError("vertices must have shape (n, 2)")
+    if cyclic and len(points) >= 2 and not np.allclose(points[0], points[-1]):
+        points = np.vstack([points, points[0]])
+
     distances = np.linalg.norm(np.diff(points, axis=0), axis=1)
     parameter = np.concatenate([[0.0], np.cumsum(distances)])
     keep = np.concatenate([[True], np.diff(parameter) > 0.0])
@@ -104,7 +137,13 @@ def plot_scipy_spline_path(
 
     parameter = parameter / parameter[-1]
     degree = min(3, len(points) - 1)
-    spline = make_interp_spline(parameter, points, k=degree, axis=0)
+    spline = make_interp_spline(
+        parameter,
+        points,
+        k=degree,
+        axis=0,
+        bc_type="periodic" if cyclic and degree > 1 else None,
+    )
     sample_t = np.linspace(0.0, 1.0, int(resolution))
     sample_points = spline(sample_t)
 
@@ -131,16 +170,16 @@ def plot_result(result: "ExperimentResult", diagnostic_mode = False, show: bool 
     n_cols = n_path_plots + (1 if diagnostic_mode else 0) + (2 if has_constraint and diagnostic_mode else 0)
     fig, axes = plt.subplots(1, n_cols, figsize=(5 * n_cols, 5))
 
-    plot_spline_path(result.initial_controls, result.knot, ax=axes[0])
-    _plot_reference_data(result, axes[0])
+    plot_linear_path(result.vertices, ax=axes[0], cyclic=result.cyclic)
+    _plot_reference_data(result, axes[0], mark_endpoints=False)
     axes[0].set_title("Linear Interpolation")
 
-    plot_scipy_spline_path(result.vertices, ax=axes[1])
-    _plot_reference_data(result, axes[1])
+    plot_scipy_spline_path(result.vertices, ax=axes[1], cyclic=result.cyclic)
+    _plot_reference_data(result, axes[1], mark_endpoints=False)
     axes[1].set_title("SciPy spline interpolation")
 
     plot_spline_path(result.optimized_controls, result.knot, ax=axes[2])
-    _plot_reference_data(result, axes[2])
+    _plot_reference_data(result, axes[2], mark_endpoints=False)
     axes[2].set_title("Physics-based interpolation")
 
     if diagnostic_mode:
@@ -185,7 +224,8 @@ def plot_result(result: "ExperimentResult", diagnostic_mode = False, show: bool 
             axes[5].set_xlabel("Outer iteration")
             axes[5].set_ylabel("lambda")
 
-    fig.suptitle(f"Points sampled = {len(result.vertices)}")
+    if result.constraint_target is not None:
+        fig.suptitle(f"Target length = {result.constraint_target:g}")
     _add_shared_path_legend(fig, axes[:n_path_plots])
     fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.94))
     if show:
@@ -213,7 +253,7 @@ def plot_sampling_comparison(
         "Physics-based interpolation",
     ]
     for row_index, (row, result) in enumerate(zip(axes, results)):
-        plot_spline_path(result.initial_controls, result.knot, ax=row[0])
+        plot_linear_path(result.vertices, ax=row[0])
         _plot_reference_data(result, row[0])
 
         plot_scipy_spline_path(result.vertices, ax=row[1])
@@ -236,7 +276,11 @@ def plot_sampling_comparison(
     return fig, axes
 
 
-def _plot_reference_data(result: "ExperimentResult", ax) -> None:
+def _plot_reference_data(
+    result: "ExperimentResult",
+    ax,
+    mark_endpoints: bool = True,
+) -> None:
     reference_points = [result.vertices]
     if result.trajectory is not None:
         trajectory = np.asarray(result.trajectory, dtype=float)
@@ -257,27 +301,28 @@ def _plot_reference_data(result: "ExperimentResult", ax) -> None:
         zorder=4,
         label="Interpolation points",
     )
-    ax.scatter(
-        result.vertices[0, 0],
-        result.vertices[0, 1],
-        facecolors="none",
-        edgecolors="tab:green",
-        marker="o",
-        s=80,
-        linewidths=1.8,
-        zorder=5,
-        label="Start",
-    )
-    ax.scatter(
-        result.vertices[-1, 0],
-        result.vertices[-1, 1],
-        color="tab:red",
-        marker="x",
-        s=80,
-        linewidths=1.8,
-        zorder=5,
-        label="End",
-    )
+    if mark_endpoints:
+        ax.scatter(
+            result.vertices[0, 0],
+            result.vertices[0, 1],
+            facecolors="none",
+            edgecolors="tab:green",
+            marker="o",
+            s=80,
+            linewidths=1.8,
+            zorder=5,
+            label="Start",
+        )
+        ax.scatter(
+            result.vertices[-1, 0],
+            result.vertices[-1, 1],
+            color="tab:red",
+            marker="x",
+            s=80,
+            linewidths=1.8,
+            zorder=5,
+            label="End",
+        )
 
     points = np.concatenate(reference_points)
     x_min, y_min = points.min(axis=0)

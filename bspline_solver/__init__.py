@@ -10,14 +10,24 @@ from .experiment import (
     solve_sampling_experiments,
     solve_experiment,
 )
-from .ground_truth import FixedMass, ground_truth, ground_truth_kepler
+from .ground_truth import (
+    FixedMass,
+    ground_truth,
+    ground_truth_kepler,
+    make_kepler_ground_truth_problem,
+)
 from .problem_factories import (
     make_double_well_ground_truth_problem,
     make_double_well_problem,
+    make_henon_heiles_ground_truth_problem,
+    make_henon_heiles_problem,
     make_kepler_problem,
+    make_polynomial_channel_ground_truth_problem,
+    make_polynomial_channel_problem,
 )
 
 _VISUALIZATION_EXPORTS = {
+    "plot_linear_path",
     "plot_result",
     "plot_sampling_comparison",
     "plot_spline_path",
@@ -40,9 +50,15 @@ __all__ = [
     "ground_truth",
     "ground_truth_kepler",
     "load_dataset",
+    "make_kepler_ground_truth_problem",
     "make_double_well_ground_truth_problem",
     "make_double_well_problem",
+    "make_henon_heiles_ground_truth_problem",
+    "make_henon_heiles_problem",
     "make_kepler_problem",
+    "make_polynomial_channel_ground_truth_problem",
+    "make_polynomial_channel_problem",
+    "plot_linear_path",
     "plot_result",
     "plot_sampling_comparison",
     "plot_spline_path",
