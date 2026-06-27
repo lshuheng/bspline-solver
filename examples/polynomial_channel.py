@@ -19,7 +19,7 @@ def main() -> None:
     initial_position = (-2.6, 1.35)
     initial_velocity = (0.55, -0.20)
     t_span = (0.0, 10.0)
-    n_vertices = [4,5, 6]
+    n_vertices = [4, 5, 6]
 
     ground_truth_problem = make_polynomial_channel_ground_truth_problem(
         kappa=kappa,

@@ -1,4 +1,4 @@
-"""Demo: reconstruct a generated two-center Kepler trajectory."""
+"""Demo: reconstruct a generated three-center Kepler trajectory."""
 
 from bspline_solver import (
     ExperimentConfig,
@@ -13,15 +13,15 @@ from bspline_solver import (
 
 def main() -> None:
     masses = [
-        FixedMass(center=[-1.1, -0.6], mass=0.7),
-        FixedMass(center=[1.1, -0.5], mass=0.85),
-        FixedMass(center=[0.0, 1.05], mass=0.55),
+        FixedMass(center=[-1.1, -0.45], mass=0.90),
+        FixedMass(center=[1.0, -0.35], mass=1.1),
+        FixedMass(center=[0.0, 1.05], mass=0.75),
     ]
     gravitational_constant = 1.0
-    initial_position = [3.37, 0.15]
-    initial_velocity = [-0.12, 0.78]
-    t_span = (0.0, 40.0)
-    n_vertices = [10, 15]
+    initial_position = [-1.85, 0.35]
+    initial_velocity = [0.95, 0.5]
+    t_span = (0.0, 15)
+    n_vertices = [8, 15]
 
     ground_truth_problem = make_kepler_ground_truth_problem(
         masses=masses,
