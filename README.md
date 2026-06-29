@@ -44,7 +44,7 @@ $$
 q(t) = (u(t), v(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1].
 $$
 
-For a symbolic Lagrangian \(L(t, u, u', u'', v, v', v'')\), the optimized curve minimizes
+For a symbolic Lagrangian $L$, the optimized curve minimizes
 
 $$
 \sum_{\text{segments}} \int_0^1 L(t, u, u', u'', v, v', v'')\,dt
