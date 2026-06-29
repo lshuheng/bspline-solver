@@ -2,27 +2,29 @@
 
 Physics-based B-spline Interpolator is a small Python library for interpolating sparsely sampled 2D trajectories governed by nonlinear ODEs. By incorporating a symbolic action functional for the underlying dynamics as the optimization objective, it can better recover the structure of the trajectory than purely geometric interpolation methods. When supplied, global integral constraints are enforced through an adaptive penalty scheme.
 
-## Demo Gallery
-
-Running the scripts in `examples/` saves these figures under `figures/` and also displays the Matplotlib window:
-
 ### Hanging Chain
 
-`examples/hanging_chain.py` minimizes gravitational potential energy while enforcing a fixed total curve length.
+`examples/hanging_chain.py` simulates a hanging chain of some given length anchored at the vertices.
 
 ![Hanging chain demo](figures/hanging_chain.png)
 
 ### Beam Buckling
 
-`examples/beam_buckling.py` minimizes bending energy with fixed length and endpoint-angle constraints.
+`examples/beam_buckling.py` simulates an elastic beam buckled of some given length at the vertices with a fixed tangent. 
 
 ![Beam buckling demo](figures/beam_buckling.png)
 
 ### Isoperimetric Curve
 
-`examples/isoperimetric.py` maximizes the area enclosed by a closed curve of fixed length.
+`examples/isoperimetric.py` maximizes the area enclosed by a closed curve of fixed length. 
 
 ![Isoperimetric demo](figures/isoperimetric.png)
+
+### Polynomial Channel Scattering
+
+`examples/polynomial_channel.py` reconstructs a trajectory scattering through a curved polynomial channel.
+
+![Polynomial channel demo](figures/polynomial_channel.png)
 
 ### Kepler Trajectory 1
 
@@ -48,11 +50,7 @@ Running the scripts in `examples/` saves these figures under `figures/` and also
 
 ![Henon-Heiles demo](figures/henon_heiles.png)
 
-### Polynomial Channel Scattering
 
-`examples/polynomial_channel.py` reconstructs a trajectory scattering through a curved polynomial channel.
-
-![Polynomial channel demo](figures/polynomial_channel.png)
 
 ## Reproducibility
 
