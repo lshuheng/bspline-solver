@@ -1,8 +1,6 @@
-# B-spline Solver
+# Physics-based B-Spline Interpolator 
 
-B-spline Solver is a small Python library for variational, physics-informed interpolation of two-dimensional trajectories.
-
-The examples compare three ways to connect the same interpolation points: a piecewise-linear path, SciPy's parametric spline interpolation, and a B-spline path optimized against a user-specified variational energy. For generated trajectory demos, the package first samples a dense ground-truth initial-value solve, then reconstructs a curve from a much smaller set of waypoints.
+Physics-based B-spline Interpolator is a small Python library for interpolating sparsely sampled 2D trajectories governed by nonlinear ODEs. By incorporating a symbolic action functional for the underlying dynamics as the optimization objective, it can better recover the structure of the trajectory than purely geometric interpolation methods. When supplied, global integral constraints are enforced through an adaptive penalty scheme.
 
 ## Demo Gallery
 
@@ -42,24 +40,24 @@ The examples open Matplotlib windows. On headless systems, configure a non-inter
 
 Given interpolation vertices \(q_i \in \mathbb{R}^2\), the solver represents each segment as a clamped B-spline curve
 
-\[
+$$
 q(t) = (u(t), v(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1].
-\]
+$$
 
 For a symbolic Lagrangian \(L(t, u, u', u'', v, v', v'')\), the optimized curve minimizes
 
-\[
+$$
 \sum_{\text{segments}} \int_0^1 L(t, u, u', u'', v, v', v'')\,dt
-\]
+$$
 
 optionally subject to an integral constraint
 
-\[
+$$
 \sum_{\text{segments}} \int_0^1 G(t, u, u', u'', v, v', v'')\,dt = g_\star.
-\]
+$$
 
 Quadrature is precomputed on the knot intervals, symbolic derivatives are generated with SymPy, and the finite-dimensional control-point problem is solved with SciPy's L-BFGS-B optimizer inside an augmented-Lagrangian loop.
 
 ## Status
 
-This is research-oriented code and still work in progress. The public API is small, examples are intentionally lightweight, and the solver currently targets two-dimensional variational problems with symbolic integrands.
+This is research-oriented code and still work in progress.

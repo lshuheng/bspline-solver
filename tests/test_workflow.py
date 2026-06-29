@@ -1,4 +1,5 @@
 import unittest
+import warnings
 from unittest.mock import patch
 
 import numpy as np
@@ -272,6 +273,51 @@ class DatasetTests(unittest.TestCase):
 
 
 class ExperimentTests(unittest.TestCase):
+    def test_solver_rejects_nonfinite_trial_controls(self):
+        dataset = TrajectoryDataset(
+            name="domain_guard",
+            vertices=[[1.0, 0.0], [2.0, 0.0]],
+        )
+        u, ut, vt = sp.symbols("u ut vt")
+        problem = VariationalProblem(
+            name="sqrt_domain",
+            lagrangian=sp.sqrt(u) + ut**2 + vt**2,
+        )
+        observed = {}
+
+        def fake_minimize(fun, x0, jac, method):
+            invalid_x = x0.copy()
+            invalid_x[: len(invalid_x) // 2] = -1.0
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always", RuntimeWarning)
+                value, gradient = fun(invalid_x)
+
+            observed["value"] = value
+            observed["gradient"] = gradient
+            observed["warnings"] = caught
+
+            class Result:
+                x = x0
+
+            return Result()
+
+        with patch("bspline_solver.solver.minimize", fake_minimize):
+            solve_experiment(
+                dataset,
+                problem,
+                ExperimentConfig(n_bisections=1, n_quad=3, max_iteration=1),
+            )
+
+        self.assertTrue(np.isfinite(observed["value"]))
+        self.assertTrue(np.all(np.isfinite(observed["gradient"])))
+        self.assertGreater(np.linalg.norm(observed["gradient"]), 0.0)
+        self.assertFalse(
+            any(
+                issubclass(item.category, RuntimeWarning)
+                for item in observed["warnings"]
+            )
+        )
+
     def test_solves_solver_independent_result(self):
         dataset = TrajectoryDataset(
             name="line",

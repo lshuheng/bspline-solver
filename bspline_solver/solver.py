@@ -157,10 +157,25 @@ class EnergyMinimizer2D:
         for _ in range(max_iteration):
             _, _, g_prev, _ = self.grad_total(self.control)
             g_prev_acc = sum(g_prev.values())
+            last_finite_control = unpack(self.control).copy()
+            invalid_penalty = 1e100
+
+            def invalid_objective(control_flat):
+                fallback_grad = np.asarray(
+                    control_flat - last_finite_control,
+                    dtype=float,
+                )
+                fallback_norm = np.linalg.norm(fallback_grad)
+                if not np.isfinite(fallback_norm) or fallback_norm == 0.0:
+                    fallback_grad = np.ones_like(control_flat, dtype=float)
+                    fallback_norm = np.linalg.norm(fallback_grad)
+                return invalid_penalty, fallback_grad / fallback_norm
 
             def objective(control_flat):
+                nonlocal last_finite_control
                 control_dict = pack(control_flat, self.spline.edges)
-                energy, gradient, g, dg = self.grad_total(control_dict)
+                with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+                    energy, gradient, g, dg = self.grad_total(control_dict)
                 g_acc = sum(g.values())
                 aug = self.constraint_multiplier * g_acc + self.constraint_stiffness * (g_acc ** 2) / 2
                 for e in self.spline.edges:
@@ -173,7 +188,12 @@ class EnergyMinimizer2D:
                             + self.constraint_stiffness * g_acc
                         ) * dg[e]
                 self.spline.grad_mask(gradient)
-                return sum(energy.values()), unpack(gradient)
+                value = sum(energy.values())
+                grad_flat = unpack(gradient)
+                if not np.isfinite(value) or not np.all(np.isfinite(grad_flat)):
+                    return invalid_objective(control_flat)
+                last_finite_control = control_flat.copy()
+                return value, grad_flat
 
             res = minimize(
                 fun=objective,
