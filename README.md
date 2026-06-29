@@ -3,7 +3,8 @@
 Physics-based B-spline Interpolator is a small Python library for interpolating sparsely sampled 2D trajectories governed by nonlinear ODEs. By incorporating a symbolic action functional for the underlying dynamics as the optimization objective, it can better recover the structure of the trajectory than purely geometric interpolation methods. When supplied, global integral constraints are enforced through an adaptive penalty scheme.
 
 ![Kepler 1 demo](figures/kepler_1.png)
-<p align="center"><sub><i>Figure: Reconstructing a precessing Kepler orbit in a three-center system from 10 and 15 sample points. Linear and geometric-spline interpolation distort the orbit; supplying the system's dynamics as a symbolic Lagrangian recovers it almost exactly. (`examples/kepler_1.py`)</i></sub></p>
+`examples/kepler_1.py`
+<p align="center"><sub><i>Figure: Reconstructing a precessing Kepler orbit in a three-center system from 10 and 15 sample points. Linear and geometric-spline interpolation distort the orbit; supplying the system's dynamics as a symbolic Lagrangian recovers it almost exactly. </i></sub></p>
 
 
 ## Quickstart
