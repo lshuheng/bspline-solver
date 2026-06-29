@@ -38,10 +38,10 @@ The examples open Matplotlib windows. On headless systems, configure a non-inter
 
 ## Mathematical Formulation
 
-Given interpolation vertices $v_i \in \mathbb{R}^2$, the solver constructs 
+Given $N$ interpolation vertices $v_i \in \mathbb{R}^2$, the solver constructs $N-1$ cubic B-spline segments
 
 $$
-q_i(t) = (u(t), v(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1]
+q_i(t) = (u_i(t), v_i(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1]
 $$
 
 such that $q_i(1) = q_{i+1}(0) = v_i$ and $q_0(0) = v_0$, with $C^1$ continuity enforced at the junctions. 
@@ -58,7 +58,7 @@ $$
 \sum_{\text{segments}} \int_0^1 G(t, u, u', u'', v, v', v'')dt = g_\star.
 $$
 
-Quadrature is precomputed on the knot intervals, symbolic derivatives are generated with SymPy, and the finite-dimensional control-point problem is solved with SciPy's L-BFGS-B optimizer inside an augmented-Lagrangian loop.
+Quadrature is precomputed on the knot intervals, and symbolic derivatives are generated with SymPy. Control point optimization is handled with SciPy's L-BFGS-B optimizer inside an augmented-Lagrangian loop.
 
 ## Status
 
