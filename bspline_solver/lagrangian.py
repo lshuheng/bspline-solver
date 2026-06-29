@@ -1,10 +1,4 @@
-"""Symbolic Lagrangian with precomputed partial derivatives.
-
-The Lagrangian L(t, u, u', u'', v, v', v'') describes the integrand of a
-variational problem on a 2D parametric curve (u(t), v(t)). This class
-computes symbolic partial derivatives once at construction time and
-lambdifies them into fast NumPy callables.
-"""
+"""Symbolic Lagrangian with precomputed partial derivatives."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# Physics-based B-Spline Interpolator 
+## Physics-based B-Spline Interpolator 
 
 Physics-based B-spline Interpolator is a small Python library for interpolating sparsely sampled 2D trajectories governed by nonlinear ODEs. By incorporating a symbolic action functional for the underlying dynamics as the optimization objective, it can better recover the structure of the trajectory than purely geometric interpolation methods. When supplied, global integral constraints are enforced through an adaptive penalty scheme.
 
@@ -36,7 +36,7 @@ $$
 
 ### Beam Buckling
 
-`examples/beam_buckling.py` simulates an elastic beam buckled of some given length at the vertices with a fixed tangent. 
+`examples/beam_buckling.py` simulates an elastic beam of some given length buckled at the vertices with a fixed tangent. 
 
 $$
 \mathcal{L}(u,v,\ddot{u},\ddot{v}) = \frac{1}{2}\left(\ddot{u}^{2}+\ddot{v}^{2}\right)

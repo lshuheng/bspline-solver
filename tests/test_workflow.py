@@ -11,7 +11,6 @@ from bspline_solver import (
     VariationalProblem,
     ground_truth,
     ground_truth_kepler,
-    load_dataset,
     make_double_well_problem,
     make_henon_heiles_problem,
     make_kepler_ground_truth_problem,
@@ -22,13 +21,6 @@ from bspline_solver import (
 
 
 class DatasetTests(unittest.TestCase):
-    def test_loads_manual_basic_vertices(self):
-        dataset = load_dataset("hanging_chain")
-
-        self.assertEqual(dataset.vertices.shape, (3, 2))
-        self.assertIsNone(dataset.trajectory)
-        self.assertEqual(dataset.metadata["source"], "manually curated")
-
     def test_rejects_invalid_trajectory_shape(self):
         with self.assertRaisesRegex(ValueError, "trajectory must have shape"):
             TrajectoryDataset(

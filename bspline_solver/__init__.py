@@ -1,8 +1,7 @@
-"""Variational B-spline ODE solver for boundary value problems."""
 
 from importlib import import_module
 
-from .datasets import TrajectoryDataset, load_dataset
+from .datasets import TrajectoryDataset
 from .experiment import (
     ExperimentConfig,
     ExperimentResult,
@@ -49,7 +48,6 @@ __all__ = [
     "VariationalProblem",
     "ground_truth",
     "ground_truth_kepler",
-    "load_dataset",
     "make_kepler_ground_truth_problem",
     "make_double_well_ground_truth_problem",
     "make_double_well_problem",

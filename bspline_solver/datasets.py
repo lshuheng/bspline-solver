@@ -1,4 +1,4 @@
-"""Dataset interfaces for manually supplied and future generated trajectories."""
+"""Dataset interfaces for manually supplied and generated trajectories."""
 
 from __future__ import annotations
 
@@ -43,23 +43,3 @@ def _points_array(value: Any, label: str) -> np.ndarray:
     if not np.all(np.isfinite(points)):
         raise ValueError(f"{label} must contain only finite values")
     return points.copy()
-
-
-def load_dataset(name: str) -> TrajectoryDataset:
-    """Load a manually curated dataset bundled with the project."""
-    from .data.basic import DATASETS
-
-    try:
-        record = DATASETS[name]
-    except KeyError as exc:
-        available = sorted(DATASETS)
-        raise KeyError(
-            f"unknown dataset {name!r}; available datasets: {available}"
-        ) from exc
-
-    return TrajectoryDataset(
-        name=name,
-        vertices=record["vertices"],
-        trajectory=record.get("trajectory"),
-        metadata=record.get("metadata", {}),
-    )
