@@ -10,6 +10,8 @@ from bspline_solver import (
     solve_sampling_experiments,
 )
 
+from _figures import save_and_show
+
 
 def main() -> None:
     masses = [
@@ -41,7 +43,8 @@ def main() -> None:
         make_kepler_problem,
         ExperimentConfig(geometric_init=False),
     )
-    plot_sampling_comparison(results)
+    fig, _ = plot_sampling_comparison(results, show=False)
+    save_and_show(fig, "kepler_2.png")
 
 
 if __name__ == "__main__":

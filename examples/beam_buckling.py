@@ -12,6 +12,8 @@ from bspline_solver import (
     solve_experiment,
 )
 
+from _figures import save_and_show
+
 
 def make_beam_buckling_problem(target_length: float) -> VariationalProblem:
     ut, vt, utt, vtt = sp.symbols("ut vt utt vtt")
@@ -43,7 +45,8 @@ def main() -> None:
             fix_location=[True, True, True],
         ),
     )
-    plot_result(result)
+    fig, _ = plot_result(result, show=False)
+    save_and_show(fig, "beam_buckling.png")
 
 
 if __name__ == "__main__":

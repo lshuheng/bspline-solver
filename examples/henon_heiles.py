@@ -11,6 +11,8 @@ from bspline_solver import (
     solve_sampling_experiments,
 )
 
+from _figures import save_and_show
+
 
 def main() -> None:
     lambda_value = 0.45
@@ -36,7 +38,8 @@ def main() -> None:
         make_henon_heiles_problem,
         ExperimentConfig(geometric_init=False),
     )
-    plot_sampling_comparison(results)
+    fig, _ = plot_sampling_comparison(results, show=False)
+    save_and_show(fig, "henon_heiles.png")
 
 
 if __name__ == "__main__":

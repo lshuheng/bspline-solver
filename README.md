@@ -4,16 +4,18 @@ Physics-based B-spline Interpolator is a small Python library for interpolating 
 
 ## Demo Gallery
 
-Curated images can live in `figures/` and be linked here as the project settles. The current examples generate comparison figures interactively:
+Running the scripts in `examples/` saves these figures under `figures/` and also displays the Matplotlib window:
 
-| Example | What it shows |
-| --- | --- |
-| `examples/hanging_chain.py` | Fixed-length catenary-style interpolation. |
-| `examples/beam_buckling.py` | Bending-energy minimization with endpoint angle constraints. |
-| `examples/isoperimetric.py` | Closed curve area maximization at fixed length. |
-| `examples/kepler_1.py`, `examples/kepler_2.py`, `examples/kepler_3.py` | Reconstruction of generated fixed-mass Kepler trajectories. |
-| `examples/henon_heiles.py` | Reconstruction of a generated Henon-Heiles trajectory. |
-| `examples/polynomial_channel.py` | Reconstruction of a generated polynomial channel-scattering trajectory. |
+| Example | What it shows | Figure |
+| --- | --- | --- |
+| `examples/hanging_chain.py` | Fixed-length catenary-style interpolation. | ![Hanging chain demo](figures/hanging_chain.png) |
+| `examples/beam_buckling.py` | Bending-energy minimization with endpoint angle constraints. | ![Beam buckling demo](figures/beam_buckling.png) |
+| `examples/isoperimetric.py` | Closed curve area maximization at fixed length. | ![Isoperimetric demo](figures/isoperimetric.png) |
+| `examples/kepler_1.py` | Reconstruction of a generated three-center Kepler trajectory. | ![Kepler 1 demo](figures/kepler_1.png) |
+| `examples/kepler_2.py` | Reconstruction of a generated three-center Kepler trajectory. | ![Kepler 2 demo](figures/kepler_2.png) |
+| `examples/kepler_3.py` | Reconstruction of a generated two-center Kepler trajectory. | ![Kepler 3 demo](figures/kepler_3.png) |
+| `examples/henon_heiles.py` | Reconstruction of a generated Henon-Heiles trajectory. | ![Henon-Heiles demo](figures/henon_heiles.png) |
+| `examples/polynomial_channel.py` | Reconstruction of a generated polynomial channel-scattering trajectory. | ![Polynomial channel demo](figures/polynomial_channel.png) |
 
 ## Reproducibility
 
@@ -34,7 +36,7 @@ python examples/kepler_1.py
 python examples/henon_heiles.py
 ```
 
-The examples open Matplotlib windows. On headless systems, configure a non-interactive backend before running plotting code.
+The examples save Matplotlib figures to `figures/` and open Matplotlib windows. On headless systems, configure a non-interactive backend before running plotting code.
 
 ## Mathematical Formulation
 

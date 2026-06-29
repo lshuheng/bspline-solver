@@ -11,6 +11,8 @@ from bspline_solver import (
     solve_sampling_experiments,
 )
 
+from _figures import save_and_show
+
 
 def main() -> None:
     kappa = 0.5
@@ -19,7 +21,7 @@ def main() -> None:
     initial_position = (-2.6, 1.35)
     initial_velocity = (0.55, -0.20)
     t_span = (0.0, 10.0)
-    n_vertices = [4, 5, 6]
+    n_vertices = [6]
 
     ground_truth_problem = make_polynomial_channel_ground_truth_problem(
         kappa=kappa,
@@ -40,7 +42,8 @@ def main() -> None:
         make_polynomial_channel_problem,
         ExperimentConfig(geometric_init=False),
     )
-    plot_sampling_comparison(results)
+    fig, _ = plot_sampling_comparison(results, show=False)
+    save_and_show(fig, "polynomial_channel.png")
 
 
 if __name__ == "__main__":

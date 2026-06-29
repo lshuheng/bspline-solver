@@ -10,6 +10,8 @@ from bspline_solver import (
     solve_experiment,
 )
 
+from _figures import save_and_show
+
 
 def make_hanging_chain_problem(target_length: float) -> VariationalProblem:
     v, ut, vt = sp.symbols("v ut vt")
@@ -37,7 +39,8 @@ def main() -> None:
         problem,
         ExperimentConfig(fix_location=[True, True, True]),
     )
-    plot_result(result)
+    fig, _ = plot_result(result, show=False)
+    save_and_show(fig, "hanging_chain.png")
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ from bspline_solver import (
     solve_experiment,
 )
 
+from _figures import save_and_show
+
 
 def make_isoperimetric_problem(target_length: float) -> VariationalProblem:
     u, v, ut, vt = sp.symbols("u v ut vt")
@@ -43,7 +45,8 @@ def main() -> None:
             cyclic=True,
         ),
     )
-    plot_result(result)
+    fig, _ = plot_result(result, show=False)
+    save_and_show(fig, "isoperimetric.png")
 
 
 if __name__ == "__main__":
