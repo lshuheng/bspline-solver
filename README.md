@@ -43,6 +43,7 @@ Given interpolation vertices $v_i \in \mathbb{R}^2$, the solver constructs
 $$
 q_i(t) = (u(t), v(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1]
 $$
+
 such that $q_i(1) = q_{i+1}(0) = v_i$ and $q_0(0) = v_0$, with $C^1$ continuity enforced at the junctions. 
 
 For a symbolic Lagrangian $L$, the optimized curve minimizes
