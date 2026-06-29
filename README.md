@@ -98,7 +98,7 @@ $$
 ![Polynomial channel demo](figures/polynomial_channel.png)
 
 
-### Kepler Trajectory 1
+### Kepler Trajectory 2
 
 `examples/kepler_2.py` compares sparse-sample reconstructions for a second three-center gravitational system.
 
@@ -110,7 +110,7 @@ $$
 
 ![Kepler 2 demo](figures/kepler_2.png)
 
-### Kepler Trajectory 2
+### Kepler Trajectory 3
 
 `examples/kepler_3.py` reconstructs a generated trajectory in a two-center gravitational potential.
 
