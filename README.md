@@ -1,5 +1,9 @@
 # Physics-based B-Spline Interpolator
+
 ![Kepler 1 demo](figures/kepler_1.png)
+<p align="center"><sub><i>Figure: Reconstructing a precessing Kepler orbit in a three-center system from 10 and 15 sample points. Linear and geometric-spline interpolation distort the orbit; supplying the system's dynamics as a symbolic Lagrangian recovers it almost exactly. (examples/kepler_1.py)</i></sub></p>
+
+
 ## Quickstart
 
 This example fits a smooth cubic B-spline through three fixed waypoints by
@@ -93,19 +97,8 @@ $$
 
 ![Polynomial channel demo](figures/polynomial_channel.png)
 
+
 ### Kepler Trajectory 1
-
-`examples/kepler_1.py` reconstructs a generated trajectory moving through a three-center gravitational potential.
-
-$$
-\mathcal{L}_{\mathrm{JM}} = \sqrt{2\left(E-V_K(u,v)\right)}\sqrt{\dot{u}^{2}+\dot{v}^{2}},
-\qquad
-V_K(u,v) = -G\sum_i\frac{m_i}{\sqrt{(u-a_i)^2+(v-b_i)^2}}
-$$
-
-![Kepler 1 demo](figures/kepler_1.png)
-
-### Kepler Trajectory 2
 
 `examples/kepler_2.py` compares sparse-sample reconstructions for a second three-center gravitational system.
 
@@ -117,7 +110,7 @@ $$
 
 ![Kepler 2 demo](figures/kepler_2.png)
 
-### Kepler Trajectory 3
+### Kepler Trajectory 2
 
 `examples/kepler_3.py` reconstructs a generated trajectory in a two-center gravitational potential.
 
