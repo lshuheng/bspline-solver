@@ -20,8 +20,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/shuhengli/bspline-solver"
-Issues = "https://github.com/shuhengli/bspline-solver/issues"
+Homepage = "https://github.com/lshuheng/bspline-solver"
+Issues = "https://github.com/lshuehng/bspline-solver/issues"
 
 [tool.setuptools.packages.find]
 include = ["bspline_solver*"]
