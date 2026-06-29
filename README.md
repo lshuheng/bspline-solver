@@ -1,5 +1,32 @@
-## Physics-based B-Spline Interpolator 
+# Physics-based B-Spline Interpolator
+![Kepler 1 demo](figures/kepler_1.png)
+## Quickstart
 
+This example fits a smooth cubic B-spline through three fixed waypoints by
+minimizing its bending energy:
+
+```python
+import sympy as sp
+
+from bspline_solver.solver import EnergyMinimizer2D
+from bspline_solver.spline import SplinePath
+
+# Build the path and its initial piecewise-linear control points.
+path = SplinePath([[0.0, 0.0], [1.0, 1.0], [2.0, 0.0]])
+control, knots = path.initial_controls(n_bisections=2)
+
+# Minimize the integral of squared second derivatives.
+utt, vtt = sp.symbols("utt vtt")
+solver = EnergyMinimizer2D(path, control, knots, utt**2 + vtt**2)
+
+initial_energy = sum(solver.grad_total(solver.control)[0].values())
+solver.minimize()
+final_energy = sum(solver.grad_total(solver.control)[0].values())
+
+print(f"Bending energy: {initial_energy:.3f} -> {final_energy:.3f}")
+print("Optimized control points:", solver.control)
+```
+## How it works
 Physics-based B-spline Interpolator is a small Python library for interpolating sparsely sampled 2D trajectories governed by nonlinear ODEs. By incorporating a symbolic action functional for the underlying dynamics as the optimization objective, it can better recover the structure of the trajectory than purely geometric interpolation methods. When supplied, global integral constraints are enforced through an adaptive penalty scheme.
 
 Given $N$ interpolation vertices $v_i \in \mathbb{R}^2$, the solver constructs $N-1$ cubic B-spline segments
