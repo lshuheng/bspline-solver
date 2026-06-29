@@ -38,22 +38,23 @@ The examples open Matplotlib windows. On headless systems, configure a non-inter
 
 ## Mathematical Formulation
 
-Given interpolation vertices \(q_i \in \mathbb{R}^2\), the solver represents each segment as a clamped B-spline curve
+Given interpolation vertices $v_i \in \mathbb{R}^2$, the solver constructs 
 
 $$
-q(t) = (u(t), v(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1].
+q_i(t) = (u(t), v(t)) = \sum_j c_j B_j(t), \quad t \in [0, 1]
 $$
+such that $q_i(1) = q_{i+1}(0) = v_i$ and $q_0(0) = v_0$, with $C^1$ continuity enforced at the junctions. 
 
 For a symbolic Lagrangian $L$, the optimized curve minimizes
 
 $$
-\sum_{\text{segments}} \int_0^1 L(t, u, u', u'', v, v', v'')\,dt
+\sum_{\text{segments}} \int_0^1 L(t, u, u', u'', v, v', v'')dt
 $$
 
 optionally subject to an integral constraint
 
 $$
-\sum_{\text{segments}} \int_0^1 G(t, u, u', u'', v, v', v'')\,dt = g_\star.
+\sum_{\text{segments}} \int_0^1 G(t, u, u', u'', v, v', v'')dt = g_\star.
 $$
 
 Quadrature is precomputed on the knot intervals, symbolic derivatives are generated with SymPy, and the finite-dimensional control-point problem is solved with SciPy's L-BFGS-B optimizer inside an augmented-Lagrangian loop.
